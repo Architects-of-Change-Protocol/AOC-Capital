@@ -1,5 +1,5 @@
 const BLOCKED_PREFIXES = ["/login", "/signup", "/auth", "/debug", "/api", "/_next"];
-const ALLOWED_PREFIXES = ["/workspace", "/projects", "/dashboard", "/portfolio", "/upload", "/command-center", "/create-pmo", "/pmo"];
+const ALLOWED_PREFIXES = ["/workspace", "/projects", "/dashboard", "/portfolio", "/upload", "/command-center", "/create-pmo", "/pmo", "/capital"];
 
 export function isSafeContinuationRoute(route: string): boolean {
   if (typeof route !== "string") return false;

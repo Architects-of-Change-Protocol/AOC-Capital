@@ -1,6 +1,29 @@
-# PMFreak AI
+# AOC Capital
 
-PMFreak AI is a Next.js app for uploading scope documents (PDF, DOCX, TXT), extracting text, and generating project analysis outputs for delivery teams.
+AOC Capital is a governed autonomous paper-trading command center, forked from PMFreak AI (a Next.js app for uploading scope documents (PDF, DOCX, TXT), extracting text, and generating project analysis outputs for delivery teams — that legacy PM/PMO surface is still present and documented below).
+
+## AOC Capital Paper Trading (new)
+
+A self-contained paper-trading module lives under `/capital` (the **Capital Command Center**). It reuses this app's existing Supabase auth and tenancy, and does **not** connect to any real exchange — every trade is simulated.
+
+Screens:
+- `/capital` — Portfolio Overview (exposure, P&L, Strategy Health)
+- `/capital/signals` — Market Signals (deterministic mock feed)
+- `/capital/trade-intents` — Trade Intents (create + view risk-policy decisions)
+- `/capital/positions` — Paper Positions
+- `/capital/risk-constitution` — Risk Constitution (Level 1 rules, read-only)
+- `/capital/capital-levels` — Capital Levels
+- `/capital/audit-ledger` — Audit Ledger
+
+Level 1 risk policy (`src/lib/trading/risk-policy-engine.ts`), enforced on every trade intent before it can become a paper position:
+- No leverage
+- No real shorts
+- Max 60% simulated exposure
+- Max daily simulated loss $20
+- Max weekly simulated loss $40
+- Max 3 open paper positions
+
+Every trade intent is evaluated by the policy engine, and every approval or rejection is written to the audit ledger (`src/lib/trading/trade-service.ts`). Schema: `supabase/migrations/20260901000000_aoc_capital_paper_trading.sql`. API: `src/app/api/capital/*`.
 
 ## Sprint 8 Highlights
 
