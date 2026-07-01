@@ -1,0 +1,15 @@
+# CURRENT_STATE_EXTERNAL_CONNECTOR_RUNTIME
+- branch: work
+- starting commit: 7f5614ac97ef001561ec2b00edcb1324508eef57
+- files changed: see git status
+- validations executed: package-json, typecheck, build, test, domain checks, external connector check
+- federation decisions: deterministic confidence aggregation with explicit uncertainty vectors
+- normalization decisions: connector-specific semantic mappings
+- lineage decisions: mandatory source lineage records per normalized signal
+- governance decisions: tenant/workspace boundary check before federation
+- resilience decisions: bounded exponential retry and drift-aware scheduling
+- remaining risks: adapter auth/token refresh flows are stubs; API route plumbing pending live backends
+- future websocket opportunities: streaming connector heartbeat + timeline deltas
+- future streaming opportunities: CDC-based replay checkpoints
+- future AI-assist federation opportunities: constrained hypothesis ranking over federated evidence
+- recommended next prompt: Prompt 5.1 — Launch Readiness, Runtime Hardening & Enterprise Productionization

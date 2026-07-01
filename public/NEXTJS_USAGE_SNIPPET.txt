@@ -1,0 +1,23 @@
+// Next.js app/layout.tsx metadata
+export const metadata = {
+  icons: {
+    icon: [
+      { url: "/light-favicon-32x32.png", media: "(prefers-color-scheme: light)" },
+      { url: "/dark-favicon-32x32.png", media: "(prefers-color-scheme: dark)" },
+      { url: "/favicon.ico" }
+    ],
+    apple: [
+      { url: "/light-apple-touch-icon.png", media: "(prefers-color-scheme: light)" },
+      { url: "/dark-apple-touch-icon.png", media: "(prefers-color-scheme: dark)" }
+    ],
+  },
+};
+
+// Animated mascot example
+// Put pmfreak-face-animated.gif in /public/brand/
+<img
+  src="/brand/pmfreak-face-animated.gif"
+  alt="PM Freak mascot"
+  width={128}
+  height={128}
+/>

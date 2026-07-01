@@ -1,0 +1,7 @@
+import type { OrganizationalDigitalTwinContext } from "./organizational-digital-twin-context";
+import type { OrganizationalFragilitySignal, OrganizationalStabilizationState, OrganizationalStateTransition, OrganizationalSurvivabilityState, OrganizationalTwinDiagnostic } from "./organizational-digital-twin-types";
+
+export function buildOrganizationalDiagnostics(context: OrganizationalDigitalTwinContext, transitions: OrganizationalStateTransition[], survivability: OrganizationalSurvivabilityState, stabilization: OrganizationalStabilizationState, fragility: OrganizationalFragilitySignal[]): OrganizationalTwinDiagnostic[] {
+  return [{ topic: "state_transition", whyChanged: transitions.map((t) => `${t.from}->${t.to}:${t.trigger}`), evidence: context.evidence, confidence: 0.75, uncertainty: ["transition remains sensitive to new evidence"], causalityRationale: ["transition is threshold-driven"], survivabilityRationale: [`stabilization_probability:${survivability.stabilizationProbability}`], governanceBoundaries: context.governanceBoundaries },
+  { topic: "fragility_emergence", whyChanged: [stabilization.trajectory, ...fragility.map((f) => f.signal)], evidence: context.evidence, confidence: 0.7, uncertainty: ["fragility may reduce with timely intervention"], causalityRationale: ["fragility tracks overload + dependencies"], survivabilityRationale: ["fragility depresses survivability"], governanceBoundaries: context.governanceBoundaries }];
+}

@@ -1,0 +1,38 @@
+import type { OperationalMemoryScope } from "../runtime-memory-types";
+
+export type ExecutiveCommandRequest = { scope: OperationalMemoryScope; now?: string; limit?: number };
+export type EvidenceBound = { evidence: string[]; confidence: number; uncertainty: string[]; causality: string[]; governanceBoundaries: string[]; survivabilityRationale: string[] };
+export type ExecutiveStabilizationPriority = EvidenceBound & { id: string; action: string; survivabilityImpact: number; propagationSeverity: number; escalationSaturation: number; portfolioInstability: number; governanceErosion: number; priorityScore: number };
+export type ExecutivePressureCluster = EvidenceBound & { id: string; label: string; zone: string; pressureScore: number; spreadRisk: "localized"|"systemic"|"spreading" };
+export type ExecutiveInstabilityZone = EvidenceBound & { zone: string; severity: "monitor"|"elevated"|"high"|"critical"; bottlenecks: string[]; localized: boolean; systemic: boolean; spreading: boolean };
+export type ExecutiveSurvivabilitySummary = EvidenceBound & { deliverySurvivability: number; milestoneSurvivability: number; operationalSurvivability: number; recoverySurvivability: number; portfolioSurvivability: number; canStabilize: boolean };
+export type ExecutiveEscalationSummary = EvidenceBound & { overload: number; fatigue: number; ineffectiveLoops: number; executiveSaturation: number; governanceCongestion: number };
+export type ExecutivePortfolioHealth = EvidenceBound & { instability: number; sharedBottlenecks: string[]; recurringGovernanceFailure: number; recurringProcurementPressure: number; pmCapacitySaturation: number; drift: number };
+export type ExecutiveFragilitySignal = EvidenceBound & { signal: string; fragilityScore: number; domains: string[] };
+export type ExecutiveCapacitySignal = EvidenceBound & { pmOverload: number; interventionOverload: number; coordinationSaturation: number; operationalFragmentation: number; recoveryFatigue: number; escalationBurden: number };
+export type ExecutiveOperationalDrift = EvidenceBound & { driftScore: number; driftDrivers: string[] };
+export type ExecutiveGovernanceRisk = EvidenceBound & { risk: string; severity: "monitor"|"elevated"|"critical"; controls: string[] };
+export type ExecutiveOperationalFocus = EvidenceBound & { focusNow: string[]; rationale: string[]; nextBestActions: string[] };
+export type ExecutiveCommandRecommendation = EvidenceBound & { recommendation: string; urgency: "immediate"|"near_term"|"scheduled"; owners: string[] };
+export type ExecutiveCommandAlert = EvidenceBound & { level: "monitor"|"elevated_attention"|"executive_attention"|"stabilization_critical"; title: string; impact: string; propagationRisk: string };
+export type ExecutiveOperationalNarrative = EvidenceBound & { narrative: string };
+export type ExecutiveWarRoomContext = EvidenceBound & { instabilityMap: ExecutiveInstabilityZone[]; criticalPathThreats: string[]; escalationMap: ExecutiveEscalationSummary; survivability: ExecutiveSurvivabilitySummary; recoveryProbability: number; recommendations: ExecutiveCommandRecommendation[]; executivePriorities: ExecutiveStabilizationPriority[]; hiddenDependencies: string[]; collapsePropagationRisk: number };
+export type ExecutiveDiagnostic = EvidenceBound & { topic: string; why: string[] };
+export type ExecutiveCommandResult = {
+  priorities: ExecutiveStabilizationPriority[];
+  pressureClusters: ExecutivePressureCluster[];
+  instabilityZones: ExecutiveInstabilityZone[];
+  survivability: ExecutiveSurvivabilitySummary;
+  escalation: ExecutiveEscalationSummary;
+  portfolio: ExecutivePortfolioHealth;
+  fragilitySignals: ExecutiveFragilitySignal[];
+  capacity: ExecutiveCapacitySignal;
+  drift: ExecutiveOperationalDrift;
+  governanceRisks: ExecutiveGovernanceRisk[];
+  focus: ExecutiveOperationalFocus;
+  warRoom: ExecutiveWarRoomContext;
+  narratives: ExecutiveOperationalNarrative[];
+  recommendations: ExecutiveCommandRecommendation[];
+  alerts: ExecutiveCommandAlert[];
+  diagnostics: ExecutiveDiagnostic[];
+};

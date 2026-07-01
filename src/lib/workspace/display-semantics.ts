@@ -1,0 +1,38 @@
+export const WORKSPACE_DISPLAY = {
+  readiness: {
+    live: "Live",
+    context: "Context",
+    memory: "Memory",
+    ready: "Ready",
+  },
+  states: {
+    standby: "Standby",
+    active: "Active",
+    synced: "Synced",
+    stable: "Stable",
+    monitoring: "Monitoring",
+    healthy: "Healthy",
+    alignment: "Alignment",
+    noActiveContext: "No active context",
+    initializing: "Initializing",
+    orienting: "Orienting",
+    engaged: "Engaged",
+    expanded: "Expanded",
+    fullyOperational: "Fully operational",
+  },
+  labels: {
+    workspace: "Workspace",
+    operationallyLive: "Operationally live",
+    standbySubtitle: "Standby",
+    dormantInvitation: "What operational reality needs attention?",
+    dormantSignalHint: "Signal will initiate context orientation.",
+  },
+  awakening: {
+    dormant: "Standby",
+    initializing: "Initializing",
+    orienting: "Orienting",
+    engaged: "Active",
+    expanded: "Active",
+    "fully-operational": "Active",
+  } as Record<string, string>,
+} as const;

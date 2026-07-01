@@ -1,0 +1,5 @@
+import type { CriticalPathNarrative, ExecutionSurvivabilityForecast, HiddenDependency, BottleneckCluster } from "./critical-path-types";
+export function buildCriticalPathNarratives(survivability: ExecutionSurvivabilityForecast, hidden: HiddenDependency[], bottlenecks: BottleneckCluster[]): CriticalPathNarrative[] {
+  const headline = survivability.survivabilityScore < 0.5 ? "Milestone survivability is degrading due to dependency pressure propagation." : "Execution chain survivability is stable but sensitive to unresolved pressure.";
+  return [{ narrative: headline, evidence: [ ...(hidden[0]?.evidence ?? []), ...(bottlenecks[0]?.evidence ?? []) ], confidence: 0.7, uncertainty: ["Narrative confidence is bounded to deterministic evidence support."], causalityChain: [ ...(hidden[0]?.causalityChain ?? []), ...(bottlenecks[0]?.causalityChain ?? []) ], propagationExplanation: "Narrative ties hidden dependencies and bottlenecks to temporal propagation windows.", survivabilityExplanation: `Current survivability score: ${survivability.survivabilityScore}.` }];
+}

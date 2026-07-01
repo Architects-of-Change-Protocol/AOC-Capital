@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict'
+import { generateDashboardActions } from '../src/lib/dashboard/action-center/action-generator.ts'
+import { assignDashboardActionOwnerLane } from '../src/lib/dashboard/action-center/owner-lane-engine.ts'
+import { assignDashboardActionExecutionLane } from '../src/lib/dashboard/action-center/execution-lane-engine.ts'
+import { assignDashboardActionSLA } from '../src/lib/dashboard/action-center/sla-engine.ts'
+import { buildDashboardActionEscalationRoute } from '../src/lib/dashboard/action-center/escalation-routing-engine.ts'
+import { prioritizeDashboardActions } from '../src/lib/dashboard/action-center/action-priority-engine.ts'
+import { runDashboardActionCenter } from '../src/lib/dashboard/action-center/action-center-runtime.ts'
+
+const input={dashboardViewModel:{hasCriticalAttention:true,warnings:['w1'],sections:{topRisksTable:[{id:'r1',title:'Critical dependency risk',severity:'critical',source:'risk-engine',affectedProjects:['p1'],rationale:'missing input and dependency unblock'}],interventionsQueue:[{id:'i1',title:'Intervention budget unblock',urgency:'high',ownerLane:'pmo_director',cadence:'Daily',affectedProjects:['p1']}],decisionsWidget:[{id:'d1',title:'Approve with conditions',recommendation:'approve_with_conditions',confidenceScore:0.8,severity:'high'}],alertPanel:[{id:'a1',title:'High cache alert',type:'cache',severity:'high',description:'financial budget payment delayed'}]}},cacheRefreshResult:{cacheStatus:'refresh_required',refreshPlan:{refreshRequired:true,refreshRecommended:true,priority:'high',reasonSummary:'stale',actions:[{id:'c1',sourceKind:'executive_dashboard_report',reason:'stale',priority:'high',title:'Refresh executive dashboard',description:'refresh now'}]},metadata:{refreshRequired:true,refreshRecommended:true,warnings:['cw1']}},hydrationResult:{riskLevel:'high',warnings:[],recoveryPlan:{recoveryRequired:true,actions:['Regenerate executive source'],fallbackMode:'safe'}},pmoInterventionReport:{interventions:[{id:'pmo1',type:'cadence',title:'Client input missing for invoice',affectedProjects:['p2'],urgency:'critical',ownerLane:'project_manager',requiredEvidence:['e1']}]}}
+
+const gen=generateDashboardActions(input); assert.equal(gen.some(a=>a.type==='resolve_portfolio_risk'),true); assert.equal(gen.some(a=>a.type==='execute_pmo_intervention'),true); assert.equal(gen.some(a=>a.type==='refresh_dashboard_source'),true); assert.equal(gen.some(a=>a.type==='recover_dashboard_hydration'),true)
+const x=prioritizeDashboardActions(gen); assert.equal(assignDashboardActionOwnerLane(x[0])!==undefined,true); assert.equal(assignDashboardActionExecutionLane(x[0])!==undefined,true); assert.equal(assignDashboardActionSLA(x[0]).responseDueHours>0,true); assert.equal(typeof buildDashboardActionEscalationRoute(x[0]).required,'boolean'); assert.equal(x.length<=gen.length,true)
+const report=runDashboardActionCenter(input); assert.equal(report.totalActions>0,true); assert.equal(typeof report.executiveSummary,'string')
+console.log('[ok] dashboard action center runtime valid')

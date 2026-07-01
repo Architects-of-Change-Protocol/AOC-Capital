@@ -1,0 +1,32 @@
+name: CI Governance
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  governance-gate:
+    name: Governance Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Build AOC packages
+        run: npm run build:aoc
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Tests
+        run: npm test
+      - name: Runtime governance
+        run: npm run check:governance
+      - name: Publish readiness
+        run: npm run check:publish-ready
+
+      - name: Package purity
+        run: npm run check:package-purity

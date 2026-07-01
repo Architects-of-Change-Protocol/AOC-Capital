@@ -1,0 +1,68 @@
+"use server";
+
+import { getAuthUser } from "@/lib/auth";
+import { resolveCanonicalWorkspace } from "@/lib/workspaces/canonical-workspace-resolver";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
+import type { PmoTeamRole, PmoDomainFocus } from "./team-roles";
+
+export type PmoTeamInviteInput = {
+  email: string;
+  role: PmoTeamRole;
+  domainFocus: PmoDomainFocus[];
+};
+
+export type SaveTeamInvitesResult =
+  | { ok: true; savedCount: number }
+  | { ok: false; error: string };
+
+export async function saveTeamInvites(
+  invites: PmoTeamInviteInput[]
+): Promise<SaveTeamInvitesResult> {
+  try {
+    const user = await getAuthUser();
+    if (!user) return { ok: false, error: "Not authenticated" };
+
+    const resolution = await resolveCanonicalWorkspace(user.id);
+    if (!resolution.workspaceId) {
+      return { ok: false, error: "No active workspace found" };
+    }
+
+    const validInvites = invites.filter((i) => {
+      const email = i.email.trim().toLowerCase();
+      return email.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && i.role;
+    });
+
+    if (validInvites.length === 0) {
+      return { ok: true, savedCount: 0 };
+    }
+
+    const supabase = createSupabaseServiceRoleClient({
+      routeId: "pmo/save-team-invites",
+      operation: "insert",
+      reason: "pmo_onboarding_team_invites",
+      workspaceId: resolution.workspaceId,
+      actorUserId: user.id,
+    });
+
+    const rows = validInvites.map((i) => ({
+      workspace_id: resolution.workspaceId,
+      invited_by_user_id: user.id,
+      email: i.email.trim().toLowerCase(),
+      role: i.role,
+      domain_focus: i.domainFocus,
+      status: "pending" as const,
+    }));
+
+    const { error } = await supabase.from("pmo_team_invites").insert(rows);
+    if (error) {
+      console.error("[pmo] team invites insert failed:", error.message);
+      return { ok: false, error: "Failed to save invites. Please try again." };
+    }
+
+    return { ok: true, savedCount: validInvites.length };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[pmo] saveTeamInvites error:", message);
+    return { ok: false, error: "An unexpected error occurred." };
+  }
+}

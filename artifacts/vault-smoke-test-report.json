@@ -1,0 +1,1275 @@
+{
+  "metadata": {
+    "generatedAt": "2026-06-30T22:06:03.044Z",
+    "artifactCount": 51,
+    "elapsedMs": 43,
+    "smokeTestVersion": "1.2.0",
+    "datasetDescription": "LATAM Enterprise PM — 5 projects across 51 operational artifacts"
+  },
+  "overview": {
+    "totalNutrients": 330,
+    "totalResidue": 15,
+    "avgNutrientsPerArtifact": 6.47,
+    "avgResiduePerArtifact": 0.29,
+    "projectCount": 5
+  },
+  "beforeAfterComparison": {
+    "before": {
+      "totalNutrients": 410,
+      "avgPerArtifact": 8.04,
+      "stakeholderCount": 113,
+      "overTriggerFlags": 24,
+      "residueTotal": 15,
+      "signalQualityPct": 30,
+      "suppressedCount": 0,
+      "totalMerged": 0
+    },
+    "after": {
+      "totalNutrients": 330,
+      "avgPerArtifact": 6.47,
+      "stakeholderCount": 35,
+      "overTriggerFlags": 18,
+      "residueTotal": 15,
+      "signalQualityPct": 35,
+      "suppressedCount": 79,
+      "totalMerged": 1
+    }
+  },
+  "suppressionMetrics": {
+    "totalSuppressed": 79,
+    "totalActive": 331,
+    "totalMerged": 1,
+    "byReason": {
+      "stakeholder_bare_reference": 77,
+      "low_value_filler": 2
+    },
+    "suppressionRate": 19
+  },
+  "signalDistribution": {
+    "blocker_signal": 35,
+    "dependency_signal": 47,
+    "risk_signal": 29,
+    "stakeholder_signal": 35,
+    "commitment_signal": 19,
+    "delivery_drift_signal": 16,
+    "governance_gap_signal": 23,
+    "timeline_pressure_signal": 14,
+    "escalation_signal": 28,
+    "financial_impediment_signal": 19,
+    "recovery_signal": 9,
+    "contradiction_signal": 11,
+    "ambiguity_signal": 28,
+    "decision_signal": 17
+  },
+  "projectStats": {
+    "proj-mep-14156": {
+      "artifactCount": 10,
+      "nutrientCount": 71,
+      "residueCount": 3,
+      "signalTypes": {
+        "blocker_signal": 8,
+        "dependency_signal": 8,
+        "risk_signal": 6,
+        "stakeholder_signal": 6,
+        "commitment_signal": 6,
+        "delivery_drift_signal": 5,
+        "governance_gap_signal": 11,
+        "timeline_pressure_signal": 2,
+        "escalation_signal": 6,
+        "financial_impediment_signal": 4,
+        "recovery_signal": 3,
+        "contradiction_signal": 1,
+        "ambiguity_signal": 4,
+        "decision_signal": 1
+      }
+    },
+    "proj-ice-9298": {
+      "artifactCount": 10,
+      "nutrientCount": 59,
+      "residueCount": 4,
+      "signalTypes": {
+        "financial_impediment_signal": 9,
+        "escalation_signal": 7,
+        "blocker_signal": 7,
+        "stakeholder_signal": 3,
+        "risk_signal": 4,
+        "ambiguity_signal": 2,
+        "decision_signal": 5,
+        "recovery_signal": 2,
+        "delivery_drift_signal": 4,
+        "contradiction_signal": 2,
+        "dependency_signal": 7,
+        "commitment_signal": 4,
+        "timeline_pressure_signal": 3
+      }
+    },
+    "proj-gch-15992": {
+      "artifactCount": 10,
+      "nutrientCount": 58,
+      "residueCount": 1,
+      "signalTypes": {
+        "blocker_signal": 6,
+        "governance_gap_signal": 6,
+        "delivery_drift_signal": 3,
+        "risk_signal": 2,
+        "commitment_signal": 6,
+        "ambiguity_signal": 6,
+        "stakeholder_signal": 5,
+        "escalation_signal": 5,
+        "recovery_signal": 3,
+        "dependency_signal": 11,
+        "contradiction_signal": 5
+      }
+    },
+    "proj-hsa-15576": {
+      "artifactCount": 10,
+      "nutrientCount": 60,
+      "residueCount": 3,
+      "signalTypes": {
+        "blocker_signal": 5,
+        "dependency_signal": 7,
+        "risk_signal": 5,
+        "stakeholder_signal": 10,
+        "escalation_signal": 6,
+        "commitment_signal": 2,
+        "ambiguity_signal": 6,
+        "timeline_pressure_signal": 5,
+        "delivery_drift_signal": 1,
+        "governance_gap_signal": 5,
+        "decision_signal": 5,
+        "recovery_signal": 1,
+        "financial_impediment_signal": 2
+      }
+    },
+    "proj-muc-13098": {
+      "artifactCount": 11,
+      "nutrientCount": 82,
+      "residueCount": 4,
+      "signalTypes": {
+        "contradiction_signal": 3,
+        "risk_signal": 12,
+        "stakeholder_signal": 11,
+        "decision_signal": 6,
+        "dependency_signal": 14,
+        "delivery_drift_signal": 3,
+        "timeline_pressure_signal": 4,
+        "ambiguity_signal": 10,
+        "financial_impediment_signal": 4,
+        "escalation_signal": 4,
+        "blocker_signal": 9,
+        "governance_gap_signal": 1,
+        "commitment_signal": 1
+      }
+    }
+  },
+  "validation": {
+    "overTriggerFlags": [
+      {
+        "artifactId": "mep-001",
+        "projectId": "proj-mep-14156",
+        "nutrientCount": 13,
+        "flag": "possible_over_triggering",
+        "detail": "13 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "mep-003",
+        "projectId": "proj-mep-14156",
+        "nutrientCount": 11,
+        "flag": "possible_over_triggering",
+        "detail": "11 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "mep-009",
+        "projectId": "proj-mep-14156",
+        "nutrientCount": 9,
+        "flag": "possible_over_triggering",
+        "detail": "9 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "ice-007",
+        "projectId": "proj-ice-9298",
+        "nutrientCount": 10,
+        "flag": "possible_over_triggering",
+        "detail": "10 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "ice-007",
+        "projectId": "proj-ice-9298",
+        "escalationCount": 4,
+        "flag": "escalation_spam",
+        "detail": "4 escalation signals from one artifact"
+      },
+      {
+        "artifactId": "gch-004",
+        "projectId": "proj-gch-15992",
+        "nutrientCount": 11,
+        "flag": "possible_over_triggering",
+        "detail": "11 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "gch-004",
+        "projectId": "proj-gch-15992",
+        "escalationCount": 4,
+        "flag": "escalation_spam",
+        "detail": "4 escalation signals from one artifact"
+      },
+      {
+        "artifactId": "gch-010",
+        "projectId": "proj-gch-15992",
+        "nutrientCount": 9,
+        "flag": "possible_over_triggering",
+        "detail": "9 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "hsa-002",
+        "projectId": "proj-hsa-15576",
+        "nutrientCount": 9,
+        "flag": "possible_over_triggering",
+        "detail": "9 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "hsa-002",
+        "projectId": "proj-hsa-15576",
+        "escalationCount": 3,
+        "flag": "escalation_spam",
+        "detail": "3 escalation signals from one artifact"
+      },
+      {
+        "artifactId": "hsa-004",
+        "projectId": "proj-hsa-15576",
+        "nutrientCount": 9,
+        "flag": "possible_over_triggering",
+        "detail": "9 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "hsa-009",
+        "projectId": "proj-hsa-15576",
+        "nutrientCount": 10,
+        "flag": "possible_over_triggering",
+        "detail": "10 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "hsa-009",
+        "projectId": "proj-hsa-15576",
+        "escalationCount": 3,
+        "flag": "escalation_spam",
+        "detail": "3 escalation signals from one artifact"
+      },
+      {
+        "artifactId": "muc-005",
+        "projectId": "proj-muc-13098",
+        "nutrientCount": 9,
+        "flag": "possible_over_triggering",
+        "detail": "9 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "muc-005",
+        "projectId": "proj-muc-13098",
+        "escalationCount": 3,
+        "flag": "escalation_spam",
+        "detail": "3 escalation signals from one artifact"
+      },
+      {
+        "artifactId": "muc-006",
+        "projectId": "proj-muc-13098",
+        "nutrientCount": 10,
+        "flag": "possible_over_triggering",
+        "detail": "10 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "muc-009",
+        "projectId": "proj-muc-13098",
+        "nutrientCount": 9,
+        "flag": "possible_over_triggering",
+        "detail": "9 nutrients extracted from a single artifact"
+      },
+      {
+        "artifactId": "muc-010",
+        "projectId": "proj-muc-13098",
+        "nutrientCount": 10,
+        "flag": "possible_over_triggering",
+        "detail": "10 nutrients extracted from a single artifact"
+      }
+    ],
+    "underTriggerFlags": [],
+    "signalDensityFlags": [
+      {
+        "flag": "sparse_residue",
+        "detail": "Average 0.29 residue per artifact — weak signals may be lost"
+      }
+    ],
+    "lineageViolations": [],
+    "determinismMismatches": [],
+    "totalFlags": 19
+  },
+  "decayObservations": [
+    {
+      "artifactId": "mep-001",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-02T09:15:00Z",
+      "freshness": 0.05,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-001",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-02T09:15:00Z",
+      "freshness": 0.05,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-001",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-02T09:15:00Z",
+      "freshness": 0.05,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-001",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-02T09:15:00Z",
+      "freshness": 0.05,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-003",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-08T11:00:00Z",
+      "freshness": 0.06,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-003",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-08T11:00:00Z",
+      "freshness": 0.06,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-003",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-08T11:00:00Z",
+      "freshness": 0.06,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-003",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-08T11:00:00Z",
+      "freshness": 0.06,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-004",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-10T16:45:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-004",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-10T16:45:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-007",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-17T14:00:00Z",
+      "freshness": 0.09,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-007",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-17T14:00:00Z",
+      "freshness": 0.09,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-009",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-24T09:00:00Z",
+      "freshness": 0.11,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "mep-009",
+      "projectId": "proj-mep-14156",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-24T09:00:00Z",
+      "freshness": 0.11,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-001",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-03T08:45:00Z",
+      "freshness": 0.05,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-001",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-03T08:45:00Z",
+      "freshness": 0.05,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-001",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-03T08:45:00Z",
+      "freshness": 0.05,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-002",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-07T14:00:00Z",
+      "freshness": 0.06,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-003",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-09T10:30:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-004",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-11T16:00:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-004",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-11T16:00:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-004",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-11T16:00:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-007",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-14T11:00:00Z",
+      "freshness": 0.08,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-007",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-14T11:00:00Z",
+      "freshness": 0.08,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-007",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-14T11:00:00Z",
+      "freshness": 0.08,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-007",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-14T11:00:00Z",
+      "freshness": 0.08,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-010",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-25T09:30:00Z",
+      "freshness": 0.11,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "ice-010",
+      "projectId": "proj-ice-9298",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-25T09:30:00Z",
+      "freshness": 0.11,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-001",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-04T10:00:00Z",
+      "freshness": 0.06,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-004",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-12T09:00:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-004",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-12T09:00:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-004",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-12T09:00:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-004",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-12T09:00:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-005",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-14T15:00:00Z",
+      "freshness": 0.08,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-005",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-14T15:00:00Z",
+      "freshness": 0.08,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-008",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-20T14:00:00Z",
+      "freshness": 0.09,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-009",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-23T17:00:00Z",
+      "freshness": 0.11,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-010",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-26T10:00:00Z",
+      "freshness": 0.12,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "gch-010",
+      "projectId": "proj-gch-15992",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-26T10:00:00Z",
+      "freshness": 0.12,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-001",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-06T09:00:00Z",
+      "freshness": 0.06,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-002",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-09T14:30:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-002",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-09T14:30:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-002",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-09T14:30:00Z",
+      "freshness": 0.07,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-004",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-14T10:00:00Z",
+      "freshness": 0.08,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-006",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-19T14:00:00Z",
+      "freshness": 0.09,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-006",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-19T14:00:00Z",
+      "freshness": 0.09,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-006",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-19T14:00:00Z",
+      "freshness": 0.09,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-009",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-26T09:30:00Z",
+      "freshness": 0.12,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-009",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-26T09:30:00Z",
+      "freshness": 0.12,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "hsa-009",
+      "projectId": "proj-hsa-15576",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-26T09:30:00Z",
+      "freshness": 0.12,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-005",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-21T09:00:00Z",
+      "freshness": 0.1,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-005",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-21T09:00:00Z",
+      "freshness": 0.1,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-005",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-04-21T09:00:00Z",
+      "freshness": 0.1,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-006",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-23T15:00:00Z",
+      "freshness": 0.1,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-006",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-23T15:00:00Z",
+      "freshness": 0.1,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-006",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-23T15:00:00Z",
+      "freshness": 0.1,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-006",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-23T15:00:00Z",
+      "freshness": 0.1,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-008",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-27T09:00:00Z",
+      "freshness": 0.12,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-008",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-27T09:00:00Z",
+      "freshness": 0.12,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-009",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-29T14:00:00Z",
+      "freshness": 0.13,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-009",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-04-29T14:00:00Z",
+      "freshness": 0.13,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-010",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "escalation_signal",
+      "submittedAt": "2026-05-02T09:00:00Z",
+      "freshness": 0.14,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "artifactId": "muc-011",
+      "projectId": "proj-muc-13098",
+      "nutrientType": "blocker_signal",
+      "submittedAt": "2026-05-05T10:00:00Z",
+      "freshness": 0.15,
+      "status": "decayed_actionable",
+      "note": "High-severity signal decayed below 50% freshness — may need reinforcement"
+    },
+    {
+      "projectId": "proj-mep-14156",
+      "blockerCount": 23,
+      "status": "recurring_unresolved_blockers",
+      "note": "Multiple unresolved high-persistence signals — possible chronic governance gap"
+    },
+    {
+      "projectId": "proj-ice-9298",
+      "blockerCount": 16,
+      "status": "recurring_unresolved_blockers",
+      "note": "Multiple unresolved high-persistence signals — possible chronic governance gap"
+    },
+    {
+      "projectId": "proj-gch-15992",
+      "blockerCount": 12,
+      "status": "recurring_unresolved_blockers",
+      "note": "Multiple unresolved high-persistence signals — possible chronic governance gap"
+    },
+    {
+      "projectId": "proj-hsa-15576",
+      "blockerCount": 12,
+      "status": "recurring_unresolved_blockers",
+      "note": "Multiple unresolved high-persistence signals — possible chronic governance gap"
+    },
+    {
+      "projectId": "proj-muc-13098",
+      "blockerCount": 14,
+      "status": "recurring_unresolved_blockers",
+      "note": "Multiple unresolved high-persistence signals — possible chronic governance gap"
+    }
+  ],
+  "cognitionReadinessScore": {
+    "coherence": 100,
+    "signalQuality": 35,
+    "noiseSuppression": 65,
+    "determinism": 100,
+    "realism": 100,
+    "explainabilityReadiness": 100,
+    "persistenceReadiness": 100,
+    "overall": 86
+  },
+  "learnedPatterns": {
+    "totalPatterns": 37,
+    "typeDistribution": {
+      "governance_degradation_pattern": 3,
+      "delivery_drift_pattern": 7,
+      "escalation_trajectory_pattern": 5,
+      "recurring_blocker_pattern": 4,
+      "recurring_dependency_pattern": 4,
+      "stakeholder_pressure_pattern": 4,
+      "ambiguity_accumulation_pattern": 4,
+      "financial_friction_pattern": 2,
+      "recovery_pattern": 4
+    },
+    "byProject": {
+      "proj-mep-14156": [
+        {
+          "patternType": "governance_degradation_pattern",
+          "title": "Governance Degradation: Timeline pressure: client committed to cybersecurity audit by April 18 — this delay puts us at risk.",
+          "severity": "high",
+          "confidence": 0.4,
+          "status": "emerging",
+          "trajectory": "stable",
+          "recurrenceCount": 2
+        },
+        {
+          "patternType": "delivery_drift_pattern",
+          "title": "Delivery Drift: Timeline pressure: client committed to cybersecurity audit by April 18 — this delay puts us at risk.",
+          "severity": "medium",
+          "confidence": 0.4,
+          "status": "emerging",
+          "trajectory": "stable",
+          "recurrenceCount": 2
+        },
+        {
+          "patternType": "recurring_blocker_pattern",
+          "title": "Recurring Blocker: Tenant provisioning is blocked by Cisco SASE portal access issue.",
+          "severity": "high",
+          "confidence": 0.74,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 8
+        },
+        {
+          "patternType": "recurring_dependency_pattern",
+          "title": "Recurring Dependency: Dependency: onboarding schedule depends on receiving admin credentials from Cisco.",
+          "severity": "medium",
+          "confidence": 0.8,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 8
+        },
+        {
+          "patternType": "stakeholder_pressure_pattern",
+          "title": "Stakeholder Pressure: The project is losing momentum and the client is losing patience with the delays.",
+          "severity": "medium",
+          "confidence": 0.72,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 6
+        },
+        {
+          "patternType": "delivery_drift_pattern",
+          "title": "Delivery Drift: Timeline pressure: client committed to cybersecurity audit by April 18 — this delay puts us at risk.",
+          "severity": "medium",
+          "confidence": 0.54,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 5
+        },
+        {
+          "patternType": "escalation_trajectory_pattern",
+          "title": "Escalation Trajectory: Escalation raised to client IT Director Jorge Paredes.",
+          "severity": "high",
+          "confidence": 0.74,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 6
+        },
+        {
+          "patternType": "ambiguity_accumulation_pattern",
+          "title": "Ambiguity Accumulation: Open question on MFA enrollment for branch office staff.",
+          "severity": "low",
+          "confidence": 0.48,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 4
+        },
+        {
+          "patternType": "recovery_pattern",
+          "title": "Recovery Pattern: Risk: if not resolved by April 12, the mobile device rollout cannot start before the audit window.",
+          "severity": "low",
+          "confidence": 0.4,
+          "status": "recovering",
+          "trajectory": "decreasing",
+          "recurrenceCount": 3
+        }
+      ],
+      "proj-muc-13098": [
+        {
+          "patternType": "escalation_trajectory_pattern",
+          "title": "Escalation Trajectory: Executive attention needed: project manager needs to align with business sponsor on realistic demo s",
+          "severity": "high",
+          "confidence": 0.42,
+          "status": "emerging",
+          "trajectory": "stable",
+          "recurrenceCount": 2
+        },
+        {
+          "patternType": "delivery_drift_pattern",
+          "title": "Delivery Drift: Client feedback delay creating sprint dependency.",
+          "severity": "medium",
+          "confidence": 0.46,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 3
+        },
+        {
+          "patternType": "delivery_drift_pattern",
+          "title": "Delivery Drift: Timeline pressure: if feedback is not received by April 14, sprint 2 start date slips.",
+          "severity": "medium",
+          "confidence": 0.64,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 4
+        },
+        {
+          "patternType": "ambiguity_accumulation_pattern",
+          "title": "Ambiguity Accumulation: Open question: does this scope change require a formal change request process or can it be absorbed?",
+          "severity": "low",
+          "confidence": 0.8,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 10
+        },
+        {
+          "patternType": "financial_friction_pattern",
+          "title": "Financial Friction: Financial concern: integration costs are not included in current project budget.",
+          "severity": "high",
+          "confidence": 0.64,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 4
+        }
+      ],
+      "proj-ice-9298": [
+        {
+          "patternType": "financial_friction_pattern",
+          "title": "Financial Friction: Financial status: PO approved, budget allocated, but payment not yet executed.",
+          "severity": "high",
+          "confidence": 0.8,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 9
+        },
+        {
+          "patternType": "escalation_trajectory_pattern",
+          "title": "Escalation Trajectory: Critical financial escalation requiring immediate attention.",
+          "severity": "high",
+          "confidence": 0.65,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 7
+        },
+        {
+          "patternType": "recurring_blocker_pattern",
+          "title": "Recurring Blocker: Financial impediment is blocking the entire storage expansion delivery.",
+          "severity": "high",
+          "confidence": 0.74,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 7
+        },
+        {
+          "patternType": "stakeholder_pressure_pattern",
+          "title": "Stakeholder Pressure: Escalated to client CFO Patricia Morales — no response yet.",
+          "severity": "medium",
+          "confidence": 0.44,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 3
+        },
+        {
+          "patternType": "delivery_drift_pattern",
+          "title": "Delivery Drift: Internal operational note on finance delay.",
+          "severity": "medium",
+          "confidence": 0.58,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 4
+        },
+        {
+          "patternType": "recurring_dependency_pattern",
+          "title": "Recurring Dependency: Dependency: data center access booking depends on confirmed delivery date from Dell logistics.",
+          "severity": "medium",
+          "confidence": 0.72,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 7
+        },
+        {
+          "patternType": "recovery_pattern",
+          "title": "Recovery Pattern: Timeline: if resolved today, delivery can be rescheduled for April 14-15.",
+          "severity": "low",
+          "confidence": 0.4,
+          "status": "recovering",
+          "trajectory": "decreasing",
+          "recurrenceCount": 2
+        }
+      ],
+      "proj-gch-15992": [
+        {
+          "patternType": "recurring_blocker_pattern",
+          "title": "Recurring Blocker: Cannot proceed with Cisco DNA Center deployment until licenses are assigned.",
+          "severity": "high",
+          "confidence": 0.82,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 6
+        },
+        {
+          "patternType": "governance_degradation_pattern",
+          "title": "Governance Degradation: Compliance concern: deployed devices are running in evaluation mode — this creates audit exposure.",
+          "severity": "high",
+          "confidence": 0.56,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 6
+        },
+        {
+          "patternType": "delivery_drift_pattern",
+          "title": "Delivery Drift: Approval required from Cisco regional team to override the activation delay.",
+          "severity": "medium",
+          "confidence": 0.54,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 3
+        },
+        {
+          "patternType": "ambiguity_accumulation_pattern",
+          "title": "Ambiguity Accumulation: The process for MFA reset is unclear — Cisco documentation shows two different flows depending on ac",
+          "severity": "low",
+          "confidence": 0.64,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 6
+        },
+        {
+          "patternType": "stakeholder_pressure_pattern",
+          "title": "Stakeholder Pressure: Client is frustrated with the vendor response time and considers this a breach of service commitment",
+          "severity": "medium",
+          "confidence": 0.6,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 5
+        },
+        {
+          "patternType": "escalation_trajectory_pattern",
+          "title": "Escalation Trajectory: Escalation raised by client IT Director.",
+          "severity": "high",
+          "confidence": 0.52,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 5
+        },
+        {
+          "patternType": "recurring_dependency_pattern",
+          "title": "Recurring Dependency: Dependency: network policy configuration depends on DNA Center access.",
+          "severity": "medium",
+          "confidence": 0.8,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 11
+        },
+        {
+          "patternType": "recovery_pattern",
+          "title": "Recovery Pattern: Executive review requested: client wants weekly status call with Cisco executive until resolved.",
+          "severity": "low",
+          "confidence": 0.4,
+          "status": "recovering",
+          "trajectory": "decreasing",
+          "recurrenceCount": 3
+        }
+      ],
+      "proj-hsa-15576": [
+        {
+          "patternType": "recurring_blocker_pattern",
+          "title": "Recurring Blocker: Blocked by: civil contractor has not finished conduit installation in areas C and D.",
+          "severity": "high",
+          "confidence": 0.6,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 5
+        },
+        {
+          "patternType": "recurring_dependency_pattern",
+          "title": "Recurring Dependency: Dependency: camera installation depends on conduit availability from civil contractor.",
+          "severity": "medium",
+          "confidence": 0.64,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 7
+        },
+        {
+          "patternType": "stakeholder_pressure_pattern",
+          "title": "Stakeholder Pressure: Client sponsor is losing confidence in the project timeline.",
+          "severity": "medium",
+          "confidence": 0.79,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 10
+        },
+        {
+          "patternType": "escalation_trajectory_pattern",
+          "title": "Escalation Trajectory: Escalated to our project director — requesting executive review of remaining scope.",
+          "severity": "high",
+          "confidence": 0.57,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 6
+        },
+        {
+          "patternType": "ambiguity_accumulation_pattern",
+          "title": "Ambiguity Accumulation: Ambiguity: unclear whether vendor will send advance replacement or require defective units returned ",
+          "severity": "low",
+          "confidence": 0.72,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 6
+        },
+        {
+          "patternType": "delivery_drift_pattern",
+          "title": "Delivery Drift: Timeline pressure: NVR must be configured and tested before April 28 to allow full system validation",
+          "severity": "medium",
+          "confidence": 0.68,
+          "status": "chronic",
+          "trajectory": "stable",
+          "recurrenceCount": 5
+        },
+        {
+          "patternType": "governance_degradation_pattern",
+          "title": "Governance Degradation: Acceptance governance ambiguity.",
+          "severity": "high",
+          "confidence": 0.52,
+          "status": "confirmed",
+          "trajectory": "stable",
+          "recurrenceCount": 5
+        },
+        {
+          "patternType": "recovery_pattern",
+          "title": "Recovery Pattern: Back on track for the server room scope — 2 days ahead of the revised plan.",
+          "severity": "low",
+          "confidence": 0.4,
+          "status": "recovering",
+          "trajectory": "decreasing",
+          "recurrenceCount": 1
+        }
+      ]
+    },
+    "expectedMissed": [],
+    "patternReadinessImpact": 10
+  }
+}

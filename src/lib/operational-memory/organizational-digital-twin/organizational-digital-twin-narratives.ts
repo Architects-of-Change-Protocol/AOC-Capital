@@ -1,0 +1,7 @@
+import type { OrganizationalDigitalTwinContext } from "./organizational-digital-twin-context";
+import type { OrganizationalScenarioProjection, OrganizationalSimulationNarrative, OrganizationalStabilizationState, OrganizationalSurvivabilityState, OrganizationalTwinState } from "./organizational-digital-twin-types";
+
+export function buildOrganizationalNarratives(context: OrganizationalDigitalTwinContext, state: OrganizationalTwinState, survivability: OrganizationalSurvivabilityState, stabilization: OrganizationalStabilizationState, scenarios: OrganizationalScenarioProjection[]): OrganizationalSimulationNarrative[] {
+  return [{ narrative: `Organizational state is ${state.state} with stabilization trajectory ${stabilization.trajectory}; survivability ${survivability.operationalSurvivability}.`, evidence: context.evidence, confidence: 0.71, uncertainty: ["narrative constrained to deterministic runtime outputs"], causalityRationale: ["narrative generated from bounded state + survivability signals"], survivabilityRationale: ["survivability score directly included"], governanceBoundaries: context.governanceBoundaries },
+  { narrative: `Most likely bounded future: ${scenarios[0]?.scenario ?? "none"}.`, evidence: context.evidence, confidence: 0.68, uncertainty: ["scenario ranking may shift with new evidence"], causalityRationale: ["scenario probability shifts come from deterministic gates"], survivabilityRationale: ["scenario ranks by survivability effect"], governanceBoundaries: context.governanceBoundaries }];
+}

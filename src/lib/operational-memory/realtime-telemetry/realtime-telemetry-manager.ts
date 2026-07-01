@@ -1,0 +1,15 @@
+import { assertTelemetryGovernance } from "./realtime-telemetry-governance";
+import { runRealtimeTelemetryRuntime } from "./realtime-telemetry-runtime";
+import type { RealtimeTelemetryRequest, RealtimeTelemetryResult } from "./realtime-telemetry-types";
+export const retrieveRealtimeTelemetry = (request: RealtimeTelemetryRequest): RealtimeTelemetryResult => { assertTelemetryGovernance(request); return runRealtimeTelemetryRuntime(request); };
+export const retrieveOperationalDeltas = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).deltas;
+export const retrieveOperationalPulse = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).pulse;
+export const retrieveDriftSignals = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).driftSignals;
+export const retrieveSurvivabilityTelemetry = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).survivability;
+export const retrieveEscalationTelemetry = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).escalation;
+export const retrievePMOverloadTelemetry = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).overload;
+export const retrievePropagationTelemetry = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).propagation;
+export const retrieveTopologyDrift = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).topology;
+export const retrieveRealtimeWarRoomState = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).warRoom;
+export const retrieveRealtimeNarratives = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).narratives;
+export const retrieveRealtimeAlerts = (request: RealtimeTelemetryRequest) => retrieveRealtimeTelemetry(request).alerts;

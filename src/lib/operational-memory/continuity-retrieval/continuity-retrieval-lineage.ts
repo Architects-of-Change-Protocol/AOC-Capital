@@ -1,0 +1,2 @@
+import type { ContinuityLineageGraph, ContinuityRetrievalCandidate } from "./continuity-retrieval-types";
+export function buildContinuityLineage(candidates: ContinuityRetrievalCandidate[]): ContinuityLineageGraph { return { nodes: candidates.map((c)=>({ id:c.record.id, type:c.record.recordType, status:c.record.resolutionStatus })), edges: candidates.filter((c)=>c.record.parentRecordId).map((c)=>({ from:c.record.parentRecordId as string, to:c.record.id, relation:c.record.lineageType ?? "related_to" })) }; }

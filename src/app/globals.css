@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: Inter, "SF Pro Text", "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+* {
+  border-color: rgb(148 163 184 / 0.2);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(34 211 238 / 0.7);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::selection {
+  background: rgb(34 211 238 / 0.25);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes drift {
+  0% { transform: translateX(0px); opacity: 0.7; }
+  50% { transform: translateX(8px); opacity: 1; }
+  100% { transform: translateX(18px); opacity: 0.5; }
+}
+
+@keyframes flow {
+  0% { transform: translate(0, 0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(26px, -6px); opacity: 0; }
+}
+
+@keyframes breathe {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.12), 0 0 22px rgba(34, 211, 238, 0.12); }
+  50% { box-shadow: inset 0 0 0 1px rgba(244, 114, 182, 0.24), 0 0 28px rgba(244, 114, 182, 0.22); }
+}
+
+@keyframes orbit {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(8px) translateY(-4px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes glow {
+  0%, 100% { filter: saturate(100%); opacity: 0.85; }
+  50% { filter: saturate(145%); opacity: 1; }
+}
+
+.stream-line {
+  fill: none;
+  stroke: rgba(125, 211, 252, 0.42);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+  stroke-linecap: round;
+  animation: streamPulse 5.8s ease-in-out infinite;
+}
+
+.neural-path {
+  fill: none;
+  stroke: rgba(125, 211, 252, 0.34);
+  stroke-width: 0.9;
+  stroke-dasharray: 2 4;
+  stroke-linecap: round;
+  animation: neuralFlow 6.5s linear infinite;
+}
+
+@keyframes streamPulse {
+  0%, 100% { stroke-opacity: 0.32; stroke-dashoffset: 0; }
+  50% { stroke-opacity: 0.85; stroke-dashoffset: -8; }
+}
+
+@keyframes neuralFlow {
+  0% { stroke-dashoffset: 0; stroke-opacity: 0.22; }
+  50% { stroke-opacity: 0.8; }
+  100% { stroke-dashoffset: -18; stroke-opacity: 0.22; }
+}
+
+@keyframes orbitalDrift {
+  0%, 100% { transform: translate(0, 0); opacity: 0.65; }
+  50% { transform: translate(6px, -5px); opacity: 1; }
+}
+
+.neural-signal {
+  fill: none;
+  stroke: url(#signalGradient);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 10 90;
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.45));
+  animation: signalTravel 5.8s linear infinite;
+}
+
+@keyframes signalTravel {
+  0% { stroke-dashoffset: 0; opacity: 0.12; }
+  20% { opacity: 0.6; }
+  65% { opacity: 0.75; }
+  100% { stroke-dashoffset: -120; opacity: 0.1; }
+}
+
+@keyframes memoryStrengthen {
+  0%, 100% { transform: scale(1); opacity: 0.72; }
+  35% { transform: scale(1.08); opacity: 1; }
+  70% { transform: scale(1.03); opacity: 0.86; }
+}
+
+@keyframes depthParticle {
+  0%, 100% { transform: translate3d(0,0,0); opacity: 0.12; }
+  50% { transform: translate3d(5px,-8px,0); opacity: 0.34; }
+}
+
+@keyframes funnelParticle {
+  0% { transform: translateX(0) scale(0.8); opacity: 0.1; }
+  30% { opacity: 0.65; }
+  100% { transform: translateX(42px) scale(1.05); opacity: 0; }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+
+@keyframes feedFade {
+  0%, 18%, 100% { opacity: 0; transform: translateY(2px); }
+  26%, 70% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes streamSweep {
+  0% { transform: translateX(-110%); opacity: 0.35; }
+  35% { opacity: 0.9; }
+  100% { transform: translateX(320%); opacity: 0.2; }
+}
+
+@keyframes scanline {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 120px; }
+}
+
+@keyframes atmosDrift {
+  0%, 100% { transform: translate3d(0,0,0) scale(1); }
+  50% { transform: translate3d(-12px,8px,0) scale(1.03); }
+}
+
+@keyframes fogShift {
+  0%, 100% { transform: translate3d(0,0,0); opacity: 0.35; }
+  50% { transform: translate3d(10px,-8px,0); opacity: 0.55; }
+}
+
+@keyframes statusPulse {
+  0%,100% { box-shadow: 0 0 0 rgba(16,185,129,0); opacity: 0.8; }
+  50% { box-shadow: 0 0 18px rgba(16,185,129,0.35); opacity: 1; }
+}
+
+.orchestrate-line {
+  fill: none;
+  stroke: rgba(148, 233, 255, 0.22);
+  stroke-width: 0.8;
+  stroke-dasharray: 4 8;
+  animation: orchestrationFlow 8s linear infinite;
+}
+
+@keyframes orchestrationFlow {
+  0% { stroke-dashoffset: 0; opacity: 0.22; }
+  50% { opacity: 0.55; }
+  100% { stroke-dashoffset: -28; opacity: 0.18; }
+}
+
+@keyframes shimmerMove {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(340%); }
+}
+
+@keyframes progressMove {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(140%); }
+}

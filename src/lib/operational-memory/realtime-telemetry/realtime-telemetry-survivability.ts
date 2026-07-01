@@ -1,0 +1,3 @@
+import type { OperationalTelemetryDelta, SurvivabilityDriftSignal } from "./realtime-telemetry-types";
+const avg=(v:number[])=>v.length?v.reduce((a,b)=>a+b,0)/v.length:0;
+export const buildSurvivabilityTelemetry=(d:OperationalTelemetryDelta[]):SurvivabilityDriftSignal=>{const down=avg(d.map(x=>x.delta));const s=Math.max(0,100-down);return {domain:"survivability",driftScore:Math.abs(down),trend:down>1?"worsening":down<-1?"improving":"stable",survivability:s,collapseRisk:100-s,recoveryViability:Math.max(0,s-20),evidence:["delta-aggregate"],confidence:0.77,uncertainty:["bounded sample"],causalityRationale:["survivability follows net operational delta"],significanceRationale:["survivability-first prioritization"],governanceBoundaries:["scoped telemetry"]};};

@@ -1,0 +1,49 @@
+import { NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/auth";
+import { canUseAdvancedAi } from "@/lib/feature-gates";
+import { runAIModule } from "@/lib/ai/gateway";
+
+export async function GET() {
+  return NextResponse.json(
+    { error: "Use POST with { rawMessage, audience } for message nudges." },
+    { status: 405 },
+  );
+}
+
+export async function POST(request: Request) {
+  const user = await getAuthUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const advancedAiAccess = await canUseAdvancedAi(user.id);
+  if (!advancedAiAccess.ok) {
+    return NextResponse.json(
+      { error: advancedAiAccess.error, feature: advancedAiAccess.feature, requiredPlan: advancedAiAccess.requiredPlan },
+      { status: 402 },
+    );
+  }
+
+  let payload: { rawMessage?: string; audience?: string; projectId?: string };
+
+  try {
+    payload = (await request.json()) as { rawMessage?: string; audience?: string; projectId?: string };
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  try {
+    const response = await runAIModule({
+      moduleId: "message-nudges",
+      input: payload,
+      context: {
+        projectId: payload.projectId?.trim() || "demo-project",
+      },
+    });
+
+    return NextResponse.json(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to process message nudges.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

@@ -1,0 +1,150 @@
+PMFreak PM-Native Language Softening Sprint
+
+Goal:
+Make PMFreak feel understandable, friendly, useful, and immediately valuable to ALL PMs:
+- junior
+- senior
+- technical
+- non-technical
+- PMO
+- founders running projects
+
+The product should feel:
+- smart
+- calm
+- useful
+- practical
+- trustworthy
+
+NOT:
+- military
+- cybersec
+- AI infrastructure
+- telemetry system
+- enterprise orchestration engine
+
+GLOBAL COPY DIRECTION
+
+Replace words like:
+- operational intelligence
+- telemetry
+- orchestration
+- intervention
+- escalation chain
+- execution instability
+- governance coherence
+- command infrastructure
+- drift detection
+- operational replay
+- enterprise execution
+
+With language like:
+- project visibility
+- project health
+- project support
+- team alignment
+- project recovery
+- meeting prep
+- smarter follow-through
+- clearer priorities
+- shared context
+- risk visibility
+- stakeholder alignment
+- next best action
+
+CORE FEELING
+
+PMFreak should feel like:
+"the smartest PM teammate you have ever had"
+
+NOT:
+"a defense system for collapsing enterprises"
+
+TARGET FILES
+
+- src/app/page.tsx
+- src/app/pricing/page.tsx
+- src/components/pmfreak/interactive-demo.tsx
+- src/features/command-center/command-center-client.tsx
+- src/components/pmfreak/activation/getting-started-flow.tsx
+- src/ui-core/auth/auth-shell.tsx
+- src/app/login/page.tsx
+- src/app/signup/page.tsx
+- src/app/demo/page.tsx
+
+SPECIFIC REQUIREMENTS
+
+Landing page:
+- simpler wording
+- shorter sentences
+- less enterprise language
+- more emotional PM pain
+- more “I need this”
+
+Command center:
+Rename concepts:
+- “Operational Command Dashboard”
+→ “Project Health Overview”
+
+- “Live Telemetry Stream”
+→ “Live Project Activity”
+
+- “Why PMFreak Intervened”
+→ “Why PMFreak Flagged This”
+
+- “Priority Action Queue”
+→ “Suggested Next Actions”
+
+Interactive demo:
+Make it feel like:
+- realistic PM scenarios
+- stakeholder tension
+- late dependencies
+- status prep
+- delivery confusion
+- recovery coordination
+
+NOT:
+- war room simulator
+- escalation infrastructure
+
+Getting started:
+Should feel:
+- welcoming
+- easy
+- setup in minutes
+- guided
+
+NOT:
+- enterprise activation workflow
+
+Buttons:
+Use more human labels:
+- Continue
+- Start Free
+- Try Demo
+- See Example
+- Review Risks
+- Prepare Update
+- Open Dashboard
+
+Avoid:
+- activate
+- orchestrate
+- intervention
+- operationalize
+- execute recovery
+
+FINAL REQUIREMENTS
+
+- Remove remaining duplicated wording
+- Keep one tone across all screens
+- Preserve existing functionality
+- Preserve layouts
+- Preserve APIs
+- Preserve business logic
+
+Validation:
+npm run lint
+npm run build
+

@@ -1,0 +1,2 @@
+import { ConnectorNarrative, FederatedOperationalSignal } from "./types/connector-types";
+export function buildFederationNarratives(signals: FederatedOperationalSignal[]): ConnectorNarrative[] { if (signals.length < 2) return []; const [a,b]=signals; return [{ id: `narrative-${a.id}-${b.id}`, statement: `${a.connector} and ${b.connector} signals jointly increased operational pressure confidence.`, evidenceSignalIds: [a.id,b.id], confidence: Math.min(a.confidence,b.confidence), uncertainty: ["causal ordering may evolve"], lineage: [...a.lineage,...b.lineage] }]; }

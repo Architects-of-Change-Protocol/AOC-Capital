@@ -1,0 +1,4 @@
+import type { CriticalMilestone, DependencyGraph } from "./critical-path-types";
+export function buildMilestoneSurvivability(graph: DependencyGraph): CriticalMilestone[] {
+  return graph.nodes.filter((n) => n.kind === "milestone").map((n) => ({ milestoneId: n.nodeId, label: n.label, state: n.pressureScore > 0.85 ? "collapse_risk" : n.pressureScore > 0.7 ? "high_risk" : n.pressureScore > 0.5 ? "unstable" : "healthy", collapseLikelihood: n.pressureScore, executionStability: Number((1 - n.pressureScore).toFixed(2)), interventionRecoverability: Number((1 - (n.pressureScore * 0.7)).toFixed(2)), evidence: n.evidence, confidence: 0.7, uncertainty: ["Milestone state depends on unresolved lineage persistence."], causalityChain: [n.nodeId], propagationExplanation: "Milestone pressure follows upstream dependency chains.", survivabilityExplanation: "Higher pressure lowers milestone survivability." }));
+}

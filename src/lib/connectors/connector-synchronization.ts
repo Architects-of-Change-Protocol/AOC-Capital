@@ -1,0 +1,1 @@
+export function computeSyncDrift(lastSyncAt: string | null, intervalSeconds: number, now = new Date()): number { if (!lastSyncAt) return intervalSeconds; const drift = Math.floor((now.getTime() - new Date(lastSyncAt).getTime()) / 1000) - intervalSeconds; return Math.max(0, drift); }
