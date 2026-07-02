@@ -1,8 +1,9 @@
-// ─── AOC Capital — Live Market Data Provider — Tests ───────────────────────────
+// ─── AOC Capital — Live Public Market Data Provider — Tests ────────────────────
 // Pure-function tests with an injected fake fetch; no real network calls.
 // Confirms the module only ever reads a public price endpoint and always
-// resolves to LivePriceUnavailableError (never a raw crash) when disabled,
-// unsupported, unreachable, or malformed — see live-price-provider.ts header.
+// resolves to LivePriceUnavailableError (never a raw crash) when the mode
+// isn't live_public, the symbol is unsupported, the feed is unreachable, or
+// the response is malformed — see live-price-provider.ts header.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -10,9 +11,11 @@ import assert from "node:assert/strict";
 const {
   LIVE_MARKET_DATA_READ_ONLY,
   LIVE_PRICE_BUCKET_MINUTES,
+  SUPPORTED_LIVE_PUBLIC_SYMBOLS,
   LivePriceUnavailableError,
   fetchLivePrice,
-  isLiveMarketDataEnabled,
+  getMarketDataMode,
+  isLivePublicMarketDataEnabled,
   getLiveMarketDataProvider,
   mapSymbolToProviderId,
   __clearLivePriceCacheForTests,
@@ -22,18 +25,49 @@ test("the module is a hard-coded, always-true read-only guard", () => {
   assert.equal(LIVE_MARKET_DATA_READ_ONLY, true);
 });
 
-test("live market data is disabled by default and for any value other than the literal string 'true'", () => {
-  assert.equal(isLiveMarketDataEnabled({}), false);
-  assert.equal(isLiveMarketDataEnabled({ LIVE_MARKET_DATA_ENABLED: "false" }), false);
-  assert.equal(isLiveMarketDataEnabled({ LIVE_MARKET_DATA_ENABLED: "1" }), false);
-  assert.equal(isLiveMarketDataEnabled({ LIVE_MARKET_DATA_ENABLED: "TRUE" }), false);
-  assert.equal(isLiveMarketDataEnabled({ LIVE_MARKET_DATA_ENABLED: "true" }), true);
+// ─── AOC_CAPITAL_MARKET_DATA_MODE ───────────────────────────────────────────
+
+test("AOC_CAPITAL_MARKET_DATA_MODE defaults to 'mock' when unset", () => {
+  assert.equal(getMarketDataMode({}), "mock");
+});
+
+test("AOC_CAPITAL_MARKET_DATA_MODE defaults to 'mock' for any unrecognized value", () => {
+  assert.equal(getMarketDataMode({ AOC_CAPITAL_MARKET_DATA_MODE: "" }), "mock");
+  assert.equal(getMarketDataMode({ AOC_CAPITAL_MARKET_DATA_MODE: "true" }), "mock");
+  assert.equal(getMarketDataMode({ AOC_CAPITAL_MARKET_DATA_MODE: "LIVE_PUBLIC" }), "mock");
+  assert.equal(getMarketDataMode({ AOC_CAPITAL_MARKET_DATA_MODE: "live" }), "mock");
+  assert.equal(getMarketDataMode({ AOC_CAPITAL_MARKET_DATA_MODE: "enabled" }), "mock");
+});
+
+test("AOC_CAPITAL_MARKET_DATA_MODE accepts exactly 'mock', 'live_public', and 'disabled'", () => {
+  assert.equal(getMarketDataMode({ AOC_CAPITAL_MARKET_DATA_MODE: "mock" }), "mock");
+  assert.equal(getMarketDataMode({ AOC_CAPITAL_MARKET_DATA_MODE: "live_public" }), "live_public");
+  assert.equal(getMarketDataMode({ AOC_CAPITAL_MARKET_DATA_MODE: "disabled" }), "disabled");
+});
+
+test("live public fetching is enabled only in live_public mode — mock and disabled both keep it off", () => {
+  assert.equal(isLivePublicMarketDataEnabled({}), false);
+  assert.equal(isLivePublicMarketDataEnabled({ AOC_CAPITAL_MARKET_DATA_MODE: "mock" }), false);
+  assert.equal(isLivePublicMarketDataEnabled({ AOC_CAPITAL_MARKET_DATA_MODE: "disabled" }), false);
+  assert.equal(isLivePublicMarketDataEnabled({ AOC_CAPITAL_MARKET_DATA_MODE: "live_public" }), true);
+});
+
+test("this setting is never read from a NEXT_PUBLIC_ variable", () => {
+  // Setting only the NEXT_PUBLIC_-prefixed variant must NOT enable live_public —
+  // this is a server-only setting by design.
+  assert.equal(isLivePublicMarketDataEnabled({ NEXT_PUBLIC_AOC_CAPITAL_MARKET_DATA_MODE: "live_public" }), false);
 });
 
 test("the provider defaults to coingecko regardless of unrecognized configuration", () => {
   assert.equal(getLiveMarketDataProvider({}), "coingecko");
   assert.equal(getLiveMarketDataProvider({ MARKET_DATA_PROVIDER: "some-other-thing" }), "coingecko");
   assert.equal(getLiveMarketDataProvider({ MARKET_DATA_PROVIDER: "coingecko" }), "coingecko");
+});
+
+// ─── Supported symbols ───────────────────────────────────────────────────────
+
+test("supported live_public symbols are exactly BTC-USD, ETH-USD, SOL-USD, AVAX-USD", () => {
+  assert.deepEqual([...SUPPORTED_LIVE_PUBLIC_SYMBOLS].sort(), ["AVAX-USD", "BTC-USD", "ETH-USD", "SOL-USD"].sort());
 });
 
 test("known crypto symbols map to a coingecko id; unsupported symbols map to null", () => {
@@ -44,6 +78,8 @@ test("known crypto symbols map to a coingecko id; unsupported symbols map to nul
   assert.equal(mapSymbolToProviderId("AAPL"), null);
   assert.equal(mapSymbolToProviderId("SPY"), null);
 });
+
+// ─── fetchLivePrice ──────────────────────────────────────────────────────────
 
 test("an unsupported symbol throws LivePriceUnavailableError without ever calling fetch", async () => {
   __clearLivePriceCacheForTests();
@@ -56,7 +92,7 @@ test("an unsupported symbol throws LivePriceUnavailableError without ever callin
   assert.equal(calls, 0);
 });
 
-test("a successful response resolves to the parsed USD price", async () => {
+test("a successful response resolves to the parsed USD price with source 'live_public'", async () => {
   __clearLivePriceCacheForTests();
   const fetchImpl = async (url) => {
     assert.match(String(url), /simple\/price/);
@@ -71,6 +107,7 @@ test("a successful response resolves to the parsed USD price", async () => {
   assert.equal(result.symbol, "BTC-USD");
   assert.equal(result.priceUsd, 65123.45);
   assert.equal(result.provider, "coingecko");
+  assert.equal(result.source, "live_public");
 });
 
 test("a non-ok HTTP response throws LivePriceUnavailableError", async () => {
@@ -126,7 +163,30 @@ test("a call after the cache TTL expires calls fetch again", async () => {
   assert.equal(calls, 2);
 });
 
-test("bucket granularity for live prices is exported and finer than the mock generator's hourly bucket", () => {
+test("bucket granularity for live_public prices is exported and finer than the mock generator's hourly bucket", () => {
   assert.ok(LIVE_PRICE_BUCKET_MINUTES > 0);
   assert.ok(LIVE_PRICE_BUCKET_MINUTES < 60);
+});
+
+test("fetchLivePrice never returns a field that looks like an execution/order/broker capability", () => {
+  const forbidden = [
+    "orderId",
+    "order_id",
+    "brokerAccountId",
+    "broker_account_id",
+    "apiKey",
+    "api_key",
+    "apiSecret",
+    "api_secret",
+    "accountBalance",
+    "account_balance",
+    "canExecute",
+    "executionEnabled",
+    "placeOrder",
+    "createOrder",
+  ];
+  const sample = { symbol: "BTC-USD", priceUsd: 1, asOf: new Date(), provider: "coingecko", source: "live_public" };
+  for (const key of forbidden) {
+    assert.ok(!(key in sample), `unexpected execution-capability-shaped field: ${key}`);
+  }
 });

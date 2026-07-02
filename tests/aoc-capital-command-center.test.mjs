@@ -53,8 +53,17 @@ test("live-market-data disclosure states it is read-only and never enables real 
   assert.match(LIVE_MARKET_DATA_DISCLOSURE, /no order is ever placed/i);
 });
 
-test("why-real-execution-is-locked copy clarifies live market data never grants order routing or account access", () => {
-  assert.match(WHY_REAL_EXECUTION_IS_LOCKED, /read-only live market data/i);
+test("live-market-data disclosure prefers 'live public' and covers the four required safety statements", () => {
+  assert.match(LIVE_MARKET_DATA_DISCLOSURE, /live public/i);
+  assert.doesNotMatch(LIVE_MARKET_DATA_DISCLOSURE, /\blive trading\b/i);
+  assert.match(LIVE_MARKET_DATA_DISCLOSURE, /paper-trading simulation only/i);
+  assert.match(LIVE_MARKET_DATA_DISCLOSURE, /no broker or exchange account is connected/i);
+  assert.match(LIVE_MARKET_DATA_DISCLOSURE, /no orders can be placed/i);
+  assert.match(LIVE_MARKET_DATA_DISCLOSURE, /real execution remains locked/i);
+});
+
+test("why-real-execution-is-locked copy clarifies live public market data never grants order routing or account access", () => {
+  assert.match(WHY_REAL_EXECUTION_IS_LOCKED, /read-only live public market data/i);
   assert.match(WHY_REAL_EXECUTION_IS_LOCKED, /never grants order routing/i);
 });
 

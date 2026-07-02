@@ -180,7 +180,7 @@ export async function loadDemoScenario(input: LoadDemoScenarioInput): Promise<Lo
     // forceMockPrice: true — the scenario's win/loss narrative is manufactured
     // relative to the deterministic simulated price generator (see
     // scenario.ts); it must never depend on live market volatility, even if
-    // this environment has LIVE_MARKET_DATA_ENABLED=true.
+    // this environment has AOC_CAPITAL_MARKET_DATA_MODE=live_public.
     const closed = await closePaperPosition({
       companyId,
       positionId: position.id,

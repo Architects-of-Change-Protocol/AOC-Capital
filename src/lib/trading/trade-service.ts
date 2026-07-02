@@ -5,7 +5,7 @@ import { getSimulatedPrice, timeBucketStart } from "./mock-price-generator";
 import {
   fetchLivePrice,
   getLiveMarketDataProvider,
-  isLiveMarketDataEnabled,
+  isLivePublicMarketDataEnabled,
   LivePriceUnavailableError,
   LIVE_PRICE_BUCKET_MINUTES,
 } from "./live-price-provider";
@@ -551,16 +551,17 @@ type RecordedMarketPrice = {
 
 /**
  * Resolves the current market price for `symbol` and records it in
- * paper_market_prices so every mark is auditable. Tries a live, read-only
- * price feed first when LIVE_MARKET_DATA_ENABLED=true and the symbol is
- * covered by the configured provider (source = 'live'); otherwise — or if the
- * live fetch fails or times out for any reason — falls back to the
- * deterministic simulated price (source = 'mock', mock-price-generator.ts).
- * Mark-to-market must never fail, hang, or place/route any order just
- * because an external price feed is slow, down, or doesn't cover a symbol:
- * paper trading always has a price to mark to, purely from data AOC Capital
- * only ever reads. Upserts on (company_id, symbol, as_of) — repeated calls
- * within the same bucket reuse the same row instead of duplicating it.
+ * paper_market_prices so every mark is auditable. Tries a live *public*,
+ * read-only price feed first when AOC_CAPITAL_MARKET_DATA_MODE=live_public
+ * and the symbol is covered by the configured provider (source =
+ * 'live_public'); otherwise — mode 'mock', mode 'disabled', or the live fetch
+ * failing/timing out for any reason — falls back to the deterministic
+ * simulated price (source = 'mock', mock-price-generator.ts). Mark-to-market
+ * must never fail, hang, or place/route any order just because an external
+ * price feed is slow, down, or doesn't cover a symbol: paper trading always
+ * has a price to mark to, purely from data AOC Capital only ever reads.
+ * Upserts on (company_id, symbol, as_of) — repeated calls within the same
+ * bucket reuse the same row instead of duplicating it.
  */
 async function recordMarketPrice(
   companyId: string,
@@ -568,22 +569,22 @@ async function recordMarketPrice(
   at: Date,
   options: { forceMock?: boolean } = {}
 ): Promise<RecordedMarketPrice> {
-  if (!options.forceMock && isLiveMarketDataEnabled()) {
+  if (!options.forceMock && isLivePublicMarketDataEnabled()) {
     try {
       const provider = getLiveMarketDataProvider();
       const live = await fetchLivePrice(symbol, { now: at, provider });
       const asOf = timeBucketStart(live.asOf, LIVE_PRICE_BUCKET_MINUTES).toISOString();
 
-      const supabase = privileged("trading/paper-market-prices", "record_live_price", companyId);
+      const supabase = privileged("trading/paper-market-prices", "record_live_public_price", companyId);
       const { error } = await supabase
         .from("paper_market_prices")
         .upsert(
-          { company_id: companyId, symbol, price_usd: live.priceUsd, as_of: asOf, source: "live", provider: live.provider },
+          { company_id: companyId, symbol, price_usd: live.priceUsd, as_of: asOf, source: "live_public", provider: live.provider },
           { onConflict: "company_id,symbol,as_of" }
         );
-      if (error) throw new Error(`Unable to record live price: ${error.message}`);
+      if (error) throw new Error(`Unable to record live public price: ${error.message}`);
 
-      return { priceUsd: live.priceUsd, source: "live", provider: live.provider, asOf };
+      return { priceUsd: live.priceUsd, source: "live_public", provider: live.provider, asOf };
     } catch (error) {
       if (!(error instanceof LivePriceUnavailableError)) throw error;
       // Live feed doesn't cover this symbol, is unreachable, or timed out —
@@ -612,21 +613,32 @@ export type MarketDataSnapshotEntry = {
   source: PaperMarketPriceSource;
   provider: string | null;
   asOf: string;
+  /** Always true. Present on every entry as an explicit, machine-checkable guarantee that this is paper-trading data only. */
+  paperOnly: true;
 };
 
 /**
  * Read-only snapshot of the price AOC Capital would mark paper positions to
  * for each tracked symbol right now, and whether it came from the optional
- * live market data feed or the deterministic simulated fallback. Backs the
- * Market Data screen only — it never places, prepares, signs, or routes an
- * order, and it never touches a broker or exchange account.
+ * live public market data feed or the deterministic simulated fallback.
+ * Backs the Market Data screen only — it never places, prepares, signs, or
+ * routes an order, and it never touches a broker or exchange account. Every
+ * entry carries paperOnly: true and no field here ever represents an
+ * execution capability (no order id, no account balance, no broker handle).
  */
 export async function getMarketDataSnapshot(companyId: string): Promise<MarketDataSnapshotEntry[]> {
   const now = new Date();
   const entries: MarketDataSnapshotEntry[] = [];
   for (const symbol of TRACKED_MARKET_DATA_SYMBOLS) {
     const recorded = await recordMarketPrice(companyId, symbol, now);
-    entries.push({ symbol, priceUsd: recorded.priceUsd, source: recorded.source, provider: recorded.provider, asOf: recorded.asOf });
+    entries.push({
+      symbol,
+      priceUsd: recorded.priceUsd,
+      source: recorded.source,
+      provider: recorded.provider,
+      asOf: recorded.asOf,
+      paperOnly: true,
+    });
   }
   return entries;
 }

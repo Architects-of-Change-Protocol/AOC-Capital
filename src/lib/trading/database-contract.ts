@@ -112,7 +112,8 @@ export type PaperPositionRow = {
   updated_at: string;
 };
 
-export type PaperMarketPriceSource = "mock" | "manual" | "live";
+/** 'live_public' (not 'live') — a read-only public price feed, never live trading or live order execution. */
+export type PaperMarketPriceSource = "mock" | "manual" | "live_public";
 
 export type PaperMarketPriceRow = {
   id: string;
@@ -121,7 +122,7 @@ export type PaperMarketPriceRow = {
   price_usd: number;
   as_of: string;
   source: PaperMarketPriceSource;
-  /** External provider that served a 'live' price (e.g. 'coingecko'); null for 'mock' and 'manual' rows. */
+  /** External provider that served a 'live_public' price (e.g. 'coingecko'); null for 'mock' and 'manual' rows. */
   provider: string | null;
   created_at: string;
 };
