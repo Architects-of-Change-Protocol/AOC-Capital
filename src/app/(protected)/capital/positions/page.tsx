@@ -25,7 +25,10 @@ export default async function PaperPositionsPage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-white">Open Paper Positions</h2>
-            <p className="mt-1 text-sm text-slate-400">Marked to a deterministic simulated price — no live market data feed is connected.</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Marked to a live public market price when available, or a deterministic simulated price otherwise — see Market Data
+              for the current source.
+            </p>
           </div>
           <MarkAllButton />
         </div>

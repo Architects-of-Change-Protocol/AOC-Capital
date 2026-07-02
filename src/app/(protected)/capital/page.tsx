@@ -5,6 +5,7 @@ import type { StrategyHealth } from "@/lib/trading/portfolio-summary";
 import {
   DISCOVERABILITY_LINKS,
   GUIDED_JOURNEY,
+  LIVE_MARKET_DATA_DISCLOSURE,
   NOT_FINANCIAL_ADVICE_DISCLOSURE,
   PAPER_ONLY_BANNER,
   PRIMARY_ACTIONS,
@@ -76,6 +77,7 @@ export default async function PortfolioOverviewPage() {
           </div>
         </div>
         <p className="mt-4 text-xs text-slate-500">{NOT_FINANCIAL_ADVICE_DISCLOSURE}</p>
+        <p className="mt-2 text-xs text-slate-500">{LIVE_MARKET_DATA_DISCLOSURE}</p>
       </div>
 
       {/* Primary actions */}
