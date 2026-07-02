@@ -83,7 +83,7 @@ export default async function PortfolioOverviewPage() {
       {/* Primary actions */}
       <div>
         <p className="mb-3 text-xs uppercase tracking-[0.2em] text-slate-400">Get started</p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PRIMARY_ACTIONS.map((action) => (
             <PrimaryActionCard key={action.href} href={action.href} label={action.label} description={action.description} />
           ))}

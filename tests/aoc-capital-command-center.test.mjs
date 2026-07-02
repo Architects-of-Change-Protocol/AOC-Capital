@@ -75,17 +75,17 @@ test("what-is-aoc-capital copy names the advisor, risk constitution, and perform
 
 // ─── Primary actions ─────────────────────────────────────────────────────────
 
-test("primary actions are exactly Start Advisor, Load Demo Strategy, Review Performance, in order", () => {
+test("primary actions are exactly Start Advisor, Choose Strategy, Load Demo Strategy, Review Performance, in order", () => {
   assert.deepEqual(
     PRIMARY_ACTIONS.map((a) => a.label),
-    ["Start Advisor", "Load Demo Strategy", "Review Performance"]
+    ["Start Advisor", "Choose Strategy", "Load Demo Strategy", "Review Performance"]
   );
 });
 
-test("primary actions link to /capital/advisor, /capital/demo, and /capital/performance", () => {
+test("primary actions link to /capital/advisor, /capital/strategies, /capital/demo, and /capital/performance", () => {
   assert.deepEqual(
     PRIMARY_ACTIONS.map((a) => a.href),
-    ["/capital/advisor", "/capital/demo", "/capital/performance"]
+    ["/capital/advisor", "/capital/strategies", "/capital/demo", "/capital/performance"]
   );
 });
 
@@ -97,12 +97,13 @@ test("every primary action has a non-empty description", () => {
 
 // ─── Guided journey ──────────────────────────────────────────────────────────
 
-test("guided journey has exactly the nine required stages in order", () => {
+test("guided journey has exactly the ten required stages in order", () => {
   assert.deepEqual(
     GUIDED_JOURNEY.map((s) => s.title),
     [
       "Advisor Intake",
       "Strategy Brief",
+      "Strategy Library",
       "Risk Constitution",
       "Demo Sandbox",
       "Trade Intents",
@@ -114,14 +115,15 @@ test("guided journey has exactly the nine required stages in order", () => {
   );
 });
 
-test("guided journey steps are numbered 1 through 9 sequentially", () => {
-  assert.deepEqual(GUIDED_JOURNEY.map((s) => s.step), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+test("guided journey steps are numbered 1 through 10 sequentially", () => {
+  assert.deepEqual(GUIDED_JOURNEY.map((s) => s.step), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 });
 
 test("guided journey links point at the real routes for each stage", () => {
   const hrefByTitle = Object.fromEntries(GUIDED_JOURNEY.map((s) => [s.title, s.href]));
   assert.equal(hrefByTitle["Advisor Intake"], "/capital/advisor");
   assert.equal(hrefByTitle["Strategy Brief"], "/capital/advisor");
+  assert.equal(hrefByTitle["Strategy Library"], "/capital/strategies");
   assert.equal(hrefByTitle["Risk Constitution"], "/capital/risk-constitution");
   assert.equal(hrefByTitle["Demo Sandbox"], "/capital/demo");
   assert.equal(hrefByTitle["Trade Intents"], "/capital/trade-intents");
@@ -170,6 +172,7 @@ test("discoverability links cover advisor, demo, performance, risk constitution,
   const hrefs = DISCOVERABILITY_LINKS.map((l) => l.href);
   for (const required of [
     "/capital/advisor",
+    "/capital/strategies",
     "/capital/demo",
     "/capital/performance",
     "/capital/risk-constitution",
