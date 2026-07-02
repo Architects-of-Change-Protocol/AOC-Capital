@@ -33,6 +33,11 @@ export const PRIMARY_ACTIONS: CommandCenterAction[] = [
     description: "Answer a few questions and get a strategy brief, risk profile, and Level 1 Risk Constitution.",
   },
   {
+    href: "/capital/strategies",
+    label: "Choose Strategy",
+    description: "Select a paper-only strategy profile for AOC Capital to simulate, govern, and evaluate.",
+  },
+  {
     href: "/capital/demo",
     label: "Load Demo Strategy",
     description: "See the whole product story in one click — advisor, risk decisions, positions, P&L, and the audit ledger.",
@@ -67,42 +72,48 @@ export const GUIDED_JOURNEY: GuidedJourneyStep[] = [
   },
   {
     step: 3,
+    title: "Strategy Library",
+    description: "Choose a paper-only strategy profile — objective, risk profile, symbols, and allowed/blocked capabilities.",
+    href: "/capital/strategies",
+  },
+  {
+    step: 4,
     title: "Risk Constitution",
     description: "A Level 1 policy — exposure, position, and loss limits — enforced on every trade intent.",
     href: "/capital/risk-constitution",
   },
   {
-    step: 4,
+    step: 5,
     title: "Demo Sandbox",
     description: "Load one coherent, governed paper scenario to see every stage below already populated.",
     href: "/capital/demo",
   },
   {
-    step: 5,
+    step: 6,
     title: "Trade Intents",
     description: "Submit trade intents; each is evaluated live by the risk policy engine, approved or rejected.",
     href: "/capital/trade-intents",
   },
   {
-    step: 6,
+    step: 7,
     title: "Paper Positions",
     description: "Approved intents open paper positions, marked to a live public market price when available, or a deterministic simulated price otherwise.",
     href: "/capital/positions",
   },
   {
-    step: 7,
+    step: 8,
     title: "Strategy Performance",
     description: "Win rate, profit factor, and drawdown computed from your paper trade history.",
     href: "/capital/performance",
   },
   {
-    step: 8,
+    step: 9,
     title: "Audit Ledger",
     description: "Every intent, decision, and position event recorded in order, in one place.",
     href: "/capital/audit-ledger",
   },
   {
-    step: 9,
+    step: 10,
     title: "Real Execution Readiness — Locked",
     description: "No broker integration, API keys, or live order routing exist yet. Real execution stays locked and gated for a future review.",
     href: null,
@@ -154,6 +165,7 @@ export interface CommandCenterLink {
 
 export const DISCOVERABILITY_LINKS: CommandCenterLink[] = [
   { href: "/capital/advisor", label: "Advisor", description: "Guided intake, strategy brief, and risk profile." },
+  { href: "/capital/strategies", label: "Strategy Library", description: "Paper-only strategy profiles to simulate, govern, and review." },
   { href: "/capital/demo", label: "Demo Sandbox", description: "One-click governed paper scenario." },
   { href: "/capital/performance", label: "Strategy Performance", description: "Win rate, profit factor, drawdown, advisor recommendation." },
   { href: "/capital/risk-constitution", label: "Risk Constitution", description: "Level 1 rules enforced on every trade intent." },

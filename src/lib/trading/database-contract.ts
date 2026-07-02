@@ -161,7 +161,8 @@ export type AuditLedgerEventType =
   | "advisor_strategy_generated"
   | "advisor_constitution_generated"
   | "demo_scenario_loaded"
-  | "demo_scenario_reset";
+  | "demo_scenario_reset"
+  | "strategy_selected";
 
 export type AuditLedgerRow = {
   id: string;
@@ -172,4 +173,21 @@ export type AuditLedgerRow = {
   actor: string;
   payload: Record<string, unknown>;
   occurred_at: string;
+};
+
+/** Persisted selection from the Strategy Library (PR #8) — see 20260906000000_aoc_capital_strategy_library.sql. Always paper-only; see src/lib/capital/strategy-library.ts for the source of truth on strategy config. */
+export type PortfolioStrategyProfileRow = {
+  id: string;
+  company_id: string;
+  portfolio_id: string;
+  strategy_key: string;
+  strategy_name: string;
+  risk_profile: string;
+  supported_symbols: string[];
+  paper_only: true;
+  real_execution_locked: true;
+  selected_at: string;
+  selected_by: string | null;
+  created_at: string;
+  updated_at: string;
 };
