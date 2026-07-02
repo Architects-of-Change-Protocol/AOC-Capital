@@ -156,7 +156,9 @@ export type AuditLedgerEventType =
   | "position_closed"
   | "position_marked_to_market"
   | "advisor_strategy_generated"
-  | "advisor_constitution_generated";
+  | "advisor_constitution_generated"
+  | "demo_scenario_loaded"
+  | "demo_scenario_reset";
 
 export type AuditLedgerRow = {
   id: string;

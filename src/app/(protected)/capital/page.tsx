@@ -32,6 +32,20 @@ export default async function PortfolioOverviewPage() {
         Paper only · Simulation mode · No real money is being traded
       </div>
 
+      <Link
+        href="/capital/demo"
+        className="flex items-center justify-between rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.05] p-5 transition hover:border-emerald-300/40 hover:bg-emerald-300/[0.09]"
+      >
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">New here? Try the Demo Strategy Sandbox</h3>
+          <p className="mt-1 text-sm text-slate-300">
+            Load one coherent, governed paper-trading scenario and see the whole product story — advisor, risk decisions, positions,
+            P&amp;L, and the audit ledger — in one click.
+          </p>
+        </div>
+        <span className="text-sm text-emerald-200">Open →</span>
+      </Link>
+
       <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-5">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Capital Command Center</p>

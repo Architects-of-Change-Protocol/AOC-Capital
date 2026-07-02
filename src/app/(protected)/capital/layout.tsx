@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAuthUser } from "@/lib/auth";
 
 const CAPITAL_NAV = [
+  { href: "/capital/demo", label: "Demo Sandbox" },
   { href: "/capital/advisor", label: "Advisor" },
   { href: "/capital", label: "Portfolio Overview" },
   { href: "/capital/performance", label: "Strategy Performance" },
