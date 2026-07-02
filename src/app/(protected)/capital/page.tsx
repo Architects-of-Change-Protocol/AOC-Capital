@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAuthUser } from "@/lib/auth";
 import { loadPortfolioOverview } from "@/lib/trading/trade-service";
 import type { StrategyHealth } from "@/lib/trading/portfolio-summary";
@@ -66,6 +67,20 @@ export default async function PortfolioOverviewPage() {
           warn={summary.weeklyLossRemainingUsd <= 0}
         />
       </div>
+
+      <Link
+        href="/capital/performance"
+        className="flex items-center justify-between rounded-2xl border border-cyan-200/20 bg-cyan-300/[0.05] p-5 transition hover:border-cyan-200/40 hover:bg-cyan-300/[0.09]"
+      >
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-200">Strategy Performance Review</h3>
+          <p className="mt-1 text-sm text-slate-300">
+            Win rate, profit factor, drawdown, and an advisor recommendation on whether to continue, adjust, or pause — paper-only, real
+            execution remains locked.
+          </p>
+        </div>
+        <span className="text-sm text-cyan-200">View →</span>
+      </Link>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
