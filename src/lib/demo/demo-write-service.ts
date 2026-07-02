@@ -177,12 +177,17 @@ export async function loadDemoScenario(input: LoadDemoScenarioInput): Promise<Lo
     const position = positionsByStepId.get(action.close.refId);
     if (!position) continue;
 
+    // forceMockPrice: true — the scenario's win/loss narrative is manufactured
+    // relative to the deterministic simulated price generator (see
+    // scenario.ts); it must never depend on live market volatility, even if
+    // this environment has LIVE_MARKET_DATA_ENABLED=true.
     const closed = await closePaperPosition({
       companyId,
       positionId: position.id,
       actor,
       actorUserId,
       closeReason: action.close.closeReason,
+      forceMockPrice: true,
     });
     positionsByStepId.set(action.close.refId, closed);
 
@@ -197,7 +202,8 @@ export async function loadDemoScenario(input: LoadDemoScenarioInput): Promise<Lo
     (position) => position.status === "open" && position.portfolio_id === portfolio.id
   );
   for (const position of openPositions) {
-    await markPositionToMarket(companyId, position.id, actor, actorUserId, { audit: true });
+    // forceMockPrice: true — see the closePaperPosition call above.
+    await markPositionToMarket(companyId, position.id, actor, actorUserId, { audit: true, forceMockPrice: true });
   }
 
   const paperPositionIds = Array.from(positionsByStepId.values()).map((position) => position.id);

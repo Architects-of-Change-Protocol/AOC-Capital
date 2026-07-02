@@ -9,11 +9,16 @@ A self-contained paper-trading module lives under `/capital` (the **Capital Comm
 Screens:
 - `/capital` — Portfolio Overview (exposure, P&L, Strategy Health)
 - `/capital/signals` — Market Signals (deterministic mock feed)
+- `/capital/market-data` — Market Data (live-or-simulated price feed, read-only)
 - `/capital/trade-intents` — Trade Intents (create + view risk-policy decisions)
 - `/capital/positions` — Paper Positions
 - `/capital/risk-constitution` — Risk Constitution (Level 1 rules, read-only)
 - `/capital/capital-levels` — Capital Levels
 - `/capital/audit-ledger` — Audit Ledger
+
+### Live Market Data (paper trading only)
+
+Positions can optionally be marked to a live, read-only market price instead of the deterministic simulated one, gated behind `LIVE_MARKET_DATA_ENABLED` (off by default — see `.env.example`). The provider (`src/lib/trading/live-price-provider.ts`) covers a handful of crypto symbols via a free, keyless public price endpoint; every other symbol, and any failure to reach the feed, falls back to the deterministic simulated price so mark-to-market never depends on an external service being up. This adds **no** broker integration, trading API keys, order routing, or execution capability of any kind — it is a read-only price feed used solely for paper-trading context.
 
 Level 1 risk policy (`src/lib/trading/risk-policy-engine.ts`), enforced on every trade intent before it can become a paper position:
 - No leverage

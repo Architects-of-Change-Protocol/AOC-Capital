@@ -112,7 +112,7 @@ export type PaperPositionRow = {
   updated_at: string;
 };
 
-export type PaperMarketPriceSource = "mock" | "manual" | "future_live";
+export type PaperMarketPriceSource = "mock" | "manual" | "live";
 
 export type PaperMarketPriceRow = {
   id: string;
@@ -121,6 +121,8 @@ export type PaperMarketPriceRow = {
   price_usd: number;
   as_of: string;
   source: PaperMarketPriceSource;
+  /** External provider that served a 'live' price (e.g. 'coingecko'); null for 'mock' and 'manual' rows. */
+  provider: string | null;
   created_at: string;
 };
 

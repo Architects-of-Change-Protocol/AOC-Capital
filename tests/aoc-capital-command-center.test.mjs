@@ -12,6 +12,7 @@ const {
   WHAT_PAPER_TRADING_MEANS,
   WHY_REAL_EXECUTION_IS_LOCKED,
   NOT_FINANCIAL_ADVICE_DISCLOSURE,
+  LIVE_MARKET_DATA_DISCLOSURE,
   PRIMARY_ACTIONS,
   GUIDED_JOURNEY,
   TRUST_LADDER,
@@ -42,6 +43,19 @@ test("not-financial-advice disclosure covers no real money, no broker/exchange, 
   assert.match(NOT_FINANCIAL_ADVICE_DISCLOSURE, /no real money/i);
   assert.match(NOT_FINANCIAL_ADVICE_DISCLOSURE, /no broker or exchange/i);
   assert.match(NOT_FINANCIAL_ADVICE_DISCLOSURE, /no api keys/i);
+});
+
+test("live-market-data disclosure states it is read-only and never enables real trading, broker connections, or credentials", () => {
+  assert.match(LIVE_MARKET_DATA_DISCLOSURE, /read-only/i);
+  assert.match(LIVE_MARKET_DATA_DISCLOSURE, /never enables real trading/i);
+  assert.match(LIVE_MARKET_DATA_DISCLOSURE, /no broker or exchange is connected/i);
+  assert.match(LIVE_MARKET_DATA_DISCLOSURE, /no trading credentials/i);
+  assert.match(LIVE_MARKET_DATA_DISCLOSURE, /no order is ever placed/i);
+});
+
+test("why-real-execution-is-locked copy clarifies live market data never grants order routing or account access", () => {
+  assert.match(WHY_REAL_EXECUTION_IS_LOCKED, /read-only live market data/i);
+  assert.match(WHY_REAL_EXECUTION_IS_LOCKED, /never grants order routing/i);
 });
 
 test("what-is-aoc-capital copy names the advisor, risk constitution, and performance review", () => {
@@ -143,7 +157,7 @@ test("only the real-execution level is locked; the rest are active or available"
 
 // ─── Discoverability links ───────────────────────────────────────────────────
 
-test("discoverability links cover advisor, demo, performance, risk constitution, paper positions, and audit ledger", () => {
+test("discoverability links cover advisor, demo, performance, risk constitution, paper positions, market data, and audit ledger", () => {
   const hrefs = DISCOVERABILITY_LINKS.map((l) => l.href);
   for (const required of [
     "/capital/advisor",
@@ -151,6 +165,7 @@ test("discoverability links cover advisor, demo, performance, risk constitution,
     "/capital/performance",
     "/capital/risk-constitution",
     "/capital/positions",
+    "/capital/market-data",
     "/capital/audit-ledger",
   ]) {
     assert.ok(hrefs.includes(required), `missing discoverability link to ${required}`);

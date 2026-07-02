@@ -2,6 +2,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import type { PortfolioRiskState } from "./risk-policy-engine";
 import { getSimulatedPrice, timeBucketStart } from "./mock-price-generator";
+import {
+  fetchLivePrice,
+  getLiveMarketDataProvider,
+  isLiveMarketDataEnabled,
+  LivePriceUnavailableError,
+  LIVE_PRICE_BUCKET_MINUTES,
+} from "./live-price-provider";
 import { computePortfolioSummary, type PortfolioSummary } from "./portfolio-summary";
 import { computeStrategyPerformance, type StrategyPerformance } from "./strategy-performance";
 import type {
@@ -9,6 +16,7 @@ import type {
   CapitalLevelRow,
   CloseReason,
   MarketSignalRow,
+  PaperMarketPriceSource,
   PaperPositionRow,
   PortfolioRow,
   RiskConstitutionRuleRow,
@@ -38,6 +46,9 @@ const DEFAULT_PORTFOLIO_NAME = "AOC Capital Paper Portfolio";
 const DEFAULT_BASE_CAPITAL_USD = 1000;
 
 const MOCK_SIGNAL_SYMBOLS = ["BTC-USD", "ETH-USD", "SOL-USD", "AAPL", "SPY"] as const;
+
+/** Symbols shown on the Market Data screen — the same universe as MOCK_SIGNAL_SYMBOLS plus AVAX-USD. */
+const TRACKED_MARKET_DATA_SYMBOLS = ["BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD", "AAPL", "SPY"] as const;
 
 export const DEFAULT_RISK_CONSTITUTION_RULES: Array<Pick<RiskConstitutionRuleRow, "rule_key" | "label" | "limit_value" | "level" | "description">> = [
   { rule_key: "no_leverage", label: "No leverage", limit_value: 1, level: 1, description: "Every paper trade must use 1x exposure. Leveraged trade intents are rejected." },
@@ -412,8 +423,8 @@ export async function getPaperPosition(companyId: string, positionId: string): P
 }
 
 /**
- * Marks every open paper position in `portfolioId` to a fresh deterministic
- * simulated price in one transaction (see mark_all_open_paper_positions in
+ * Marks every open paper position in `portfolioId` to a fresh market price in
+ * one transaction (see mark_all_open_paper_positions in
  * 20260903000000_aoc_capital_position_lifecycle_mtm.sql). No audit event is
  * written for bulk marks — see markPositionToMarket for the audited,
  * explicitly user-triggered single-position path.
@@ -434,7 +445,7 @@ export async function markAllOpenPositions(companyId: string, portfolioId: strin
   const marks = await Promise.all(
     positions.map(async (position) => ({
       position_id: position.id,
-      current_price_usd: await recordSimulatedPrice(companyId, position.symbol, now),
+      current_price_usd: (await recordMarketPrice(companyId, position.symbol, now)).priceUsd,
     }))
   );
 
@@ -450,18 +461,28 @@ export async function markAllOpenPositions(companyId: string, portfolioId: strin
 }
 
 /**
- * Marks a single open paper position to a fresh deterministic simulated price
- * (see mark_paper_position in 20260903000000_aoc_capital_position_lifecycle_mtm.sql).
+ * Marks a single open paper position to a fresh market price (see
+ * mark_paper_position in 20260903000000_aoc_capital_position_lifecycle_mtm.sql).
  * Writes a position_marked_to_market audit event when explicitly triggered
  * (audit=true), since every refresh of the Paper Positions screen would
- * otherwise spam the audit ledger.
+ * otherwise spam the audit ledger. `forceMockPrice` is used only by the Demo
+ * Strategy Sandbox (see src/lib/demo/demo-write-service.ts) so its scripted,
+ * predictable P&L narrative never depends on live market volatility.
  */
-export async function markPositionToMarket(companyId: string, positionId: string, actor: string, actorUserId: string, options: { audit?: boolean } = {}): Promise<PaperPositionRow> {
+export async function markPositionToMarket(
+  companyId: string,
+  positionId: string,
+  actor: string,
+  actorUserId: string,
+  options: { audit?: boolean; forceMockPrice?: boolean } = {}
+): Promise<PaperPositionRow> {
   const existing = await getPaperPosition(companyId, positionId);
   if (!existing) throw new PaperPositionNotFoundError(positionId);
   if (existing.status !== "open") throw new PaperPositionNotOpenError(positionId);
 
-  const currentPriceUsd = await recordSimulatedPrice(companyId, existing.symbol, new Date());
+  const currentPriceUsd = (
+    await recordMarketPrice(companyId, existing.symbol, new Date(), { forceMock: options.forceMockPrice })
+  ).priceUsd;
 
   const supabase = privileged("trading/paper-positions", "mark_paper_position", companyId, actorUserId);
   const { data, error } = await supabase.rpc("mark_paper_position", {
@@ -481,21 +502,26 @@ export type ClosePaperPositionInput = {
   actor: string;
   actorUserId: string;
   closeReason: CloseReason;
+  /** See markPositionToMarket's forceMockPrice doc — used only by the Demo Strategy Sandbox. */
+  forceMockPrice?: boolean;
 };
 
 /**
- * Closes an open paper position: gets the simulated close price server-side,
- * then delegates the atomic close + realized P&L calculation + audit write to
- * close_paper_position() (20260903000000_aoc_capital_position_lifecycle_mtm.sql).
- * If the audit insert inside that function fails, the whole transaction rolls
- * back — the position is never closed without an audit event.
+ * Closes an open paper position: gets the current market close price
+ * server-side, then delegates the atomic close + realized P&L calculation +
+ * audit write to close_paper_position()
+ * (20260903000000_aoc_capital_position_lifecycle_mtm.sql). If the audit
+ * insert inside that function fails, the whole transaction rolls back — the
+ * position is never closed without an audit event.
  */
 export async function closePaperPosition(input: ClosePaperPositionInput): Promise<PaperPositionRow> {
   const existing = await getPaperPosition(input.companyId, input.positionId);
   if (!existing) throw new PaperPositionNotFoundError(input.positionId);
   if (existing.status !== "open") throw new PaperPositionNotOpenError(input.positionId);
 
-  const closePriceUsd = await recordSimulatedPrice(input.companyId, existing.symbol, new Date());
+  const closePriceUsd = (
+    await recordMarketPrice(input.companyId, existing.symbol, new Date(), { forceMock: input.forceMockPrice })
+  ).priceUsd;
 
   const supabase = privileged("trading/paper-positions", "close_paper_position", input.companyId, input.actorUserId);
   const { data, error } = await supabase.rpc("close_paper_position", {
@@ -509,30 +535,100 @@ export async function closePaperPosition(input: ClosePaperPositionInput): Promis
   return data as PaperPositionRow;
 }
 
-/** Lists paper positions after refreshing every open one to a fresh simulated price. */
+/** Lists paper positions after refreshing every open one to a fresh market price. */
 export async function listPaperPositionsMarked(companyId: string): Promise<PaperPositionRow[]> {
   const portfolio = await getOrCreateDefaultPortfolio(companyId);
   await markAllOpenPositions(companyId, portfolio.id);
   return listPaperPositions(companyId);
 }
 
+type RecordedMarketPrice = {
+  priceUsd: number;
+  source: PaperMarketPriceSource;
+  provider: string | null;
+  asOf: string;
+};
+
 /**
- * Computes the deterministic simulated price for `symbol` and records it in
- * paper_market_prices (source = 'mock') so marks are auditable. Upserts on
- * (company_id, symbol, as_of) — repeated calls within the same UTC hour bucket
- * reuse the same row instead of duplicating it.
+ * Resolves the current market price for `symbol` and records it in
+ * paper_market_prices so every mark is auditable. Tries a live, read-only
+ * price feed first when LIVE_MARKET_DATA_ENABLED=true and the symbol is
+ * covered by the configured provider (source = 'live'); otherwise — or if the
+ * live fetch fails or times out for any reason — falls back to the
+ * deterministic simulated price (source = 'mock', mock-price-generator.ts).
+ * Mark-to-market must never fail, hang, or place/route any order just
+ * because an external price feed is slow, down, or doesn't cover a symbol:
+ * paper trading always has a price to mark to, purely from data AOC Capital
+ * only ever reads. Upserts on (company_id, symbol, as_of) — repeated calls
+ * within the same bucket reuse the same row instead of duplicating it.
  */
-async function recordSimulatedPrice(companyId: string, symbol: string, at: Date): Promise<number> {
+async function recordMarketPrice(
+  companyId: string,
+  symbol: string,
+  at: Date,
+  options: { forceMock?: boolean } = {}
+): Promise<RecordedMarketPrice> {
+  if (!options.forceMock && isLiveMarketDataEnabled()) {
+    try {
+      const provider = getLiveMarketDataProvider();
+      const live = await fetchLivePrice(symbol, { now: at, provider });
+      const asOf = timeBucketStart(live.asOf, LIVE_PRICE_BUCKET_MINUTES).toISOString();
+
+      const supabase = privileged("trading/paper-market-prices", "record_live_price", companyId);
+      const { error } = await supabase
+        .from("paper_market_prices")
+        .upsert(
+          { company_id: companyId, symbol, price_usd: live.priceUsd, as_of: asOf, source: "live", provider: live.provider },
+          { onConflict: "company_id,symbol,as_of" }
+        );
+      if (error) throw new Error(`Unable to record live price: ${error.message}`);
+
+      return { priceUsd: live.priceUsd, source: "live", provider: live.provider, asOf };
+    } catch (error) {
+      if (!(error instanceof LivePriceUnavailableError)) throw error;
+      // Live feed doesn't cover this symbol, is unreachable, or timed out —
+      // fall through to the deterministic simulated price below.
+    }
+  }
+
   const priceUsd = getSimulatedPrice(symbol, at);
   const asOf = timeBucketStart(at).toISOString();
 
   const supabase = privileged("trading/paper-market-prices", "record_simulated_price", companyId);
   const { error } = await supabase
     .from("paper_market_prices")
-    .upsert({ company_id: companyId, symbol, price_usd: priceUsd, as_of: asOf, source: "mock" }, { onConflict: "company_id,symbol,as_of" });
+    .upsert(
+      { company_id: companyId, symbol, price_usd: priceUsd, as_of: asOf, source: "mock", provider: null },
+      { onConflict: "company_id,symbol,as_of" }
+    );
   if (error) throw new Error(`Unable to record simulated price: ${error.message}`);
 
-  return priceUsd;
+  return { priceUsd, source: "mock", provider: null, asOf };
+}
+
+export type MarketDataSnapshotEntry = {
+  symbol: string;
+  priceUsd: number;
+  source: PaperMarketPriceSource;
+  provider: string | null;
+  asOf: string;
+};
+
+/**
+ * Read-only snapshot of the price AOC Capital would mark paper positions to
+ * for each tracked symbol right now, and whether it came from the optional
+ * live market data feed or the deterministic simulated fallback. Backs the
+ * Market Data screen only — it never places, prepares, signs, or routes an
+ * order, and it never touches a broker or exchange account.
+ */
+export async function getMarketDataSnapshot(companyId: string): Promise<MarketDataSnapshotEntry[]> {
+  const now = new Date();
+  const entries: MarketDataSnapshotEntry[] = [];
+  for (const symbol of TRACKED_MARKET_DATA_SYMBOLS) {
+    const recorded = await recordMarketPrice(companyId, symbol, now);
+    entries.push({ symbol, priceUsd: recorded.priceUsd, source: recorded.source, provider: recorded.provider, asOf: recorded.asOf });
+  }
+  return entries;
 }
 
 export async function listAuditLedger(companyId: string): Promise<AuditLedgerRow[]> {
