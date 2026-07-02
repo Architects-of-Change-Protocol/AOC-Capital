@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAuthUser } from "@/lib/auth";
 
 const CAPITAL_NAV = [
+  { href: "/capital/advisor", label: "Advisor" },
   { href: "/capital", label: "Portfolio Overview" },
   { href: "/capital/signals", label: "Market Signals" },
   { href: "/capital/trade-intents", label: "Trade Intents" },

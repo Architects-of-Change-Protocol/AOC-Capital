@@ -112,7 +112,9 @@ export type AuditLedgerEventType =
   | "trade_decision_approved"
   | "trade_decision_rejected"
   | "position_opened"
-  | "position_closed";
+  | "position_closed"
+  | "advisor_strategy_generated"
+  | "advisor_constitution_generated";
 
 export type AuditLedgerRow = {
   id: string;
