@@ -175,7 +175,7 @@ export type AuditLedgerRow = {
   occurred_at: string;
 };
 
-/** Persisted selection from the Strategy Library (PR #8) — see 20260906000000_aoc_capital_strategy_library.sql. Always paper-only; see src/lib/capital/strategy-library.ts for the source of truth on strategy config. */
+/** Persisted selection from the Strategy Library — see 20260906000000_aoc_capital_strategy_library.sql. Always paper-only; see src/lib/capital/strategy-library.ts for the source of truth on strategy config. */
 export type PortfolioStrategyProfileRow = {
   id: string;
   company_id: string;

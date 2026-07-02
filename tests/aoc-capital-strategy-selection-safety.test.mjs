@@ -114,3 +114,39 @@ test("the GET /strategies route requires auth and marks the response paperOnly/r
   assert.match(getRouteTs, /paperOnly:\s*true/);
   assert.match(getRouteTs, /realExecutionLocked:\s*true/);
 });
+
+// ─── Stale selected strategy handling ───────────────────────────────────────
+// resolveSelectedStrategy must surface a stale strategy_key (one removed from
+// STRATEGY_LIBRARY since it was selected) as a clear warning, never crash,
+// never silently look like "no strategy was ever selected", and never enable
+// execution or imply a trade intent / paper position exists. See
+// tests/aoc-capital-strategy-selection-resolution.test.mjs for direct,
+// pure-function coverage of resolveSelectedStrategy's return values.
+
+const resolveSelectedStrategyBody = extractFunction(serviceTs, "export function resolveSelectedStrategy");
+
+test("resolveSelectedStrategy is a pure read-side helper — it never calls a write function", () => {
+  assert.doesNotMatch(resolveSelectedStrategyBody, /\.upsert\(|\.insert\(|\.update\(|\.delete\(|privileged\(|recordAuditEvent\(/);
+});
+
+test("resolveSelectedStrategy never creates a trade intent or paper position, even for a stale strategy_key", () => {
+  assert.doesNotMatch(resolveSelectedStrategyBody, /createTradeIntent|closePaperPosition|markPositionToMarket|evaluate_and_record_trade_intent/);
+});
+
+test("resolveSelectedStrategy returns a staleSelectedStrategy object (not a bare null) when getStrategyByKey finds nothing", () => {
+  assert.match(resolveSelectedStrategyBody, /if \(strategy\) \{/);
+  assert.match(resolveSelectedStrategyBody, /staleSelectedStrategy:\s*\{/);
+  assert.match(resolveSelectedStrategyBody, /reason:\s*"This previously selected strategy is no longer available in the current library\."/);
+});
+
+test("resolveSelectedStrategy always returns paperOnly: true and realExecutionLocked: true on every branch, even the stale one", () => {
+  const paperOnlyTrueCount = (resolveSelectedStrategyBody.match(/paperOnly:\s*true/g) || []).length;
+  const lockedTrueCount = (resolveSelectedStrategyBody.match(/realExecutionLocked:\s*true/g) || []).length;
+  assert.ok(paperOnlyTrueCount >= 3, "expected paperOnly: true on the no-profile, resolved, and stale branches");
+  assert.ok(lockedTrueCount >= 3, "expected realExecutionLocked: true on the no-profile, resolved, and stale branches");
+  assert.doesNotMatch(resolveSelectedStrategyBody, /paperOnly:\s*false|realExecutionLocked:\s*false/);
+});
+
+test("the GET /strategies route surfaces staleSelectedStrategy alongside selectedStrategy", () => {
+  assert.match(getRouteTs, /staleSelectedStrategy:\s*resolved\.staleSelectedStrategy/);
+});

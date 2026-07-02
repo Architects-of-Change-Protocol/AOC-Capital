@@ -1,4 +1,4 @@
-// AOC Capital Strategy Library — static, paper-only strategy catalog (PR #8).
+// AOC Capital Strategy Library — static, paper-only strategy catalog.
 //
 // Pure data + pure functions, no I/O. Every StrategyLibraryItem is a fixed
 // literal: paperOnly: true and realExecutionLocked: true are TypeScript

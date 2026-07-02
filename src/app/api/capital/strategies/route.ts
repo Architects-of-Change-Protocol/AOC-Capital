@@ -14,12 +14,14 @@ export async function GET() {
     Promise.resolve(getStrategyLibrary()),
     getSelectedStrategyProfile(user.companyId),
   ]);
+  const resolved = resolveSelectedStrategy(profile);
 
   return NextResponse.json({
     paperOnly: true,
     realExecutionLocked: true,
     strategies,
-    selectedStrategy: resolveSelectedStrategy(profile),
+    selectedStrategy: resolved.selectedStrategy,
+    staleSelectedStrategy: resolved.staleSelectedStrategy,
     selectedStrategyProfile: profile,
   });
 }

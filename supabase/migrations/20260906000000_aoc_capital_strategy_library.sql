@@ -1,4 +1,4 @@
--- AOC Capital Strategy Library (PR #8): lets a user select a paper-only
+-- AOC Capital Strategy Library: lets a user select a paper-only
 -- strategy profile for AOC Capital to simulate, govern, and review. The
 -- strategy catalog itself is a static TypeScript module
 -- (src/lib/capital/strategy-library.ts) — this migration only adds a place to

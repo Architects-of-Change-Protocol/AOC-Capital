@@ -1,5 +1,5 @@
 // ─── AOC Capital Strategy Library — Static Catalog — Tests ──────────────────────
-// Pure-function tests over the static Strategy Library module (PR #8); no
+// Pure-function tests over the static Strategy Library module; no
 // Supabase / live database / network calls required. Mirrors the pure-data
 // test pattern used elsewhere in this suite (e.g.
 // tests/aoc-capital-risk-policy-engine.test.mjs).
@@ -201,7 +201,7 @@ test("every strategy has non-empty name, description, objective, suggestedCapita
   }
 });
 
-test("the library includes the five named PR #8 strategies", () => {
+test("the library includes the five named Strategy Library strategies", () => {
   const keys = getStrategyLibrary().map((s) => s.key);
   assert.ok(keys.includes("conservative_crypto_trend"));
   assert.ok(keys.includes("btc_eth_momentum"));
