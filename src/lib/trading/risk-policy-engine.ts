@@ -22,9 +22,18 @@ export type PortfolioRiskState = {
   currentExposureUsd: number;
   /** Count of currently open paper positions. */
   openPositionCount: number;
-  /** Realized + unrealized paper P&L for the current UTC day (negative = loss). */
+  /**
+   * Realized paper P&L for positions closed within the trailing 24h (a rolling
+   * window, not the UTC calendar day; negative = loss). Unrealized P&L on
+   * still-open positions is never included — see getPortfolioRiskState() in
+   * trade-service.ts.
+   */
   dailyPnlUsd: number;
-  /** Realized + unrealized paper P&L for the trailing 7 days (negative = loss). */
+  /**
+   * Realized paper P&L for positions closed within the trailing 7 days (a
+   * rolling window, not a UTC calendar week; negative = loss). Unrealized P&L
+   * on still-open positions is never included.
+   */
   weeklyPnlUsd: number;
 };
 
