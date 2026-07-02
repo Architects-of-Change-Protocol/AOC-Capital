@@ -17,6 +17,7 @@ export const NAVIGATION_HIERARCHY: NavigationNode[] = [
   { label: "Execution", href: "/command-center", tier: "lens", visibleByDefault: true },
   { label: "Executive", href: "/executive", tier: "lens", visibleByDefault: true },
   { label: "Portfolio", href: "/portfolio", tier: "lens", visibleByDefault: true },
+  { label: "Capital", href: "/capital", tier: "lens", visibleByDefault: true },
 
   { label: "Projects", href: "/projects", tier: "utility", visibleByDefault: true },
   { label: "Programs", href: "/programs", tier: "utility", visibleByDefault: true },
