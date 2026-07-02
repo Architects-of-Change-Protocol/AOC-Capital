@@ -600,9 +600,9 @@ export async function getPortfolioSummary(companyId: string, portfolio?: Portfol
  * data and Level 1 risk-limit health as getPortfolioSummary(), then hands the
  * closed-trade history and current mark-to-market state to
  * computeStrategyPerformance() (strategy-performance.ts) for win rate,
- * profit factor, drawdown, and the advisor recommendation. Read-only — like
- * getPortfolioSummary(), it does not itself refresh open positions to a
- * fresh simulated price; callers that want a fresh mark should call
+ * profit factor, drawdown, and the advisor recommendation. This function is
+ * paper-only analytics; like getPortfolioSummary(), it does not itself refresh
+ * open positions to a fresh simulated price; callers that want a fresh mark should call
  * markAllOpenPositions() first (see the /api/capital/performance route).
  * Never unlocks real execution.
  */

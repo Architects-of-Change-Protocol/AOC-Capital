@@ -21,7 +21,7 @@ const HEALTH_COPY: Record<StrategyHealth, { label: string; className: string }> 
 };
 
 const RECOMMENDATION_COPY: Record<AdvisorRecommendationAction, { label: string; className: string }> = {
-  continue: { label: "Continue", className: "border-emerald-300/30 bg-emerald-300/[0.08] text-emerald-200" },
+  continue: { label: "Continue Paper Monitoring", className: "border-emerald-300/30 bg-emerald-300/[0.08] text-emerald-200" },
   reduce_risk: { label: "Reduce Risk", className: "border-amber-300/30 bg-amber-300/[0.08] text-amber-200" },
   pause: { label: "Pause", className: "border-rose-300/30 bg-rose-300/[0.08] text-rose-200" },
   review_required: { label: "Review Required", className: "border-amber-300/30 bg-amber-300/[0.08] text-amber-200" },
@@ -58,7 +58,7 @@ export default async function StrategyPerformancePage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className={`rounded-full border px-4 py-1.5 text-sm font-medium ${healthCopy.className}`}>Strategy Health: {healthCopy.label}</span>
+          <span className={`rounded-full border px-4 py-1.5 text-sm font-medium ${healthCopy.className}`}>Risk Health: {healthCopy.label}</span>
           <span className={`rounded-full border px-4 py-1.5 text-sm font-medium ${recommendationCopy.className}`}>Advisor: {recommendationCopy.label}</span>
         </div>
       </div>
@@ -78,7 +78,7 @@ export default async function StrategyPerformancePage() {
         <StatCard label="Average Win" value={perf.avgWinUsd === null ? "—" : `$${perf.avgWinUsd.toFixed(2)}`} tone={perf.avgWinUsd === null ? undefined : "positive"} />
         <StatCard label="Average Loss" value={perf.avgLossUsd === null ? "—" : `$${perf.avgLossUsd.toFixed(2)}`} tone={perf.avgLossUsd === null ? undefined : "negative"} />
         <StatCard label="Profit Factor" value={perf.profitFactor === null ? "—" : perf.profitFactor.toFixed(2)} sub="Gross wins ÷ gross losses" tone={perf.profitFactor !== null && perf.profitFactor < 1 ? "warn" : undefined} />
-        <StatCard label="Max Drawdown" value={`${perf.maxDrawdownPct.toFixed(1)}%`} sub={`$${perf.maxDrawdownUsd.toFixed(2)} peak-to-trough`} tone={perf.maxDrawdownPct >= 15 ? "warn" : undefined} />
+        <StatCard label="Derived Max Drawdown" value={`${perf.maxDrawdownPct.toFixed(1)}%`} sub={`$${perf.maxDrawdownUsd.toFixed(2)} peak-to-trough`} tone={perf.maxDrawdownPct >= 15 ? "warn" : undefined} />
         <StatCard label="Current Drawdown" value={`${perf.currentDrawdownPct.toFixed(1)}%`} sub={`$${perf.currentDrawdownUsd.toFixed(2)} below peak`} tone={perf.currentDrawdownPct >= 15 ? "warn" : undefined} />
         <StatCard label="Exposure Usage" value={`${perf.exposureUsagePct.toFixed(1)}%`} sub="Of max Level 1 exposure ceiling" tone={perf.exposureUsagePct >= 80 ? "warn" : undefined} />
         <StatCard label="Daily Loss Usage" value={`${perf.dailyLossUsagePct.toFixed(1)}%`} sub="Rolling 24h, realized only" tone={perf.dailyLossUsagePct >= 50 ? "warn" : undefined} />
@@ -89,7 +89,7 @@ export default async function StrategyPerformancePage() {
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Best Trade</h3>
           {perf.bestTrade === null ? (
-            <p className="mt-3 text-sm text-slate-500">No closed paper trades yet.</p>
+            <p className="mt-3 text-sm text-slate-500">No meaningful winning trade yet.</p>
           ) : (
             <div className="mt-3 flex items-center justify-between rounded-xl border border-white/5 bg-black/10 px-4 py-3 text-sm">
               <span className="text-white">{perf.bestTrade.symbol}</span>
@@ -102,7 +102,7 @@ export default async function StrategyPerformancePage() {
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Worst Trade</h3>
           {perf.worstTrade === null ? (
-            <p className="mt-3 text-sm text-slate-500">No closed paper trades yet.</p>
+            <p className="mt-3 text-sm text-slate-500">No meaningful losing trade yet.</p>
           ) : (
             <div className="mt-3 flex items-center justify-between rounded-xl border border-white/5 bg-black/10 px-4 py-3 text-sm">
               <span className="text-white">{perf.worstTrade.symbol}</span>
@@ -111,6 +111,10 @@ export default async function StrategyPerformancePage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-400">
+        Drawdown is derived from closed paper trades plus current open P&amp;L; it does not include full intratrade mark history.
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-400">

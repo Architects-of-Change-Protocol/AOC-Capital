@@ -168,22 +168,37 @@ export function classifyStrategyHealth(input: { riskHealth: StrategyHealth; curr
  * profit-factor considerations. Every branch is paper-only — none of them
  * ever return a value that unlocks real execution (see test #10).
  */
-export function recommendAdvisorAction(input: { strategyHealth: StrategyHealth; closedPositionsCount: number; profitFactor: number | null }): AdvisorRecommendationAction {
+export function recommendAdvisorAction(input: {
+  strategyHealth: StrategyHealth;
+  closedPositionsCount: number;
+  profitFactor: number | null;
+  totalReturnPct: number;
+  winningTradesCount: number;
+  losingTradesCount: number;
+  grossWinUsd: number;
+}): AdvisorRecommendationAction {
   if (input.strategyHealth === "breached") return "pause";
   if (input.strategyHealth === "caution") return "reduce_risk";
   if (input.closedPositionsCount < MIN_CLOSED_POSITIONS_FOR_REAL_EXECUTION) return "not_ready_for_real_execution";
+
+  const hasMeaningfulPositiveEvidence = input.totalReturnPct > 0 && input.winningTradesCount > 0 && input.grossWinUsd > 0;
+  if (!hasMeaningfulPositiveEvidence) return "review_required";
+
   if (input.profitFactor !== null && input.profitFactor < LOW_PROFIT_FACTOR_THRESHOLD) return "review_required";
+  if (input.profitFactor === null && input.losingTradesCount > 0) return "review_required";
   return "continue";
 }
 
 function bestTrade(closedPositions: ClosedTradeInput[]): TradeHighlight | null {
-  if (closedPositions.length === 0) return null;
-  return closedPositions.reduce((best, p) => (p.realizedPnlUsd > best.realizedPnlUsd ? p : best), closedPositions[0]);
+  const wins = closedPositions.filter((p) => p.realizedPnlUsd > 0);
+  if (wins.length === 0) return null;
+  return wins.reduce((best, p) => (p.realizedPnlUsd > best.realizedPnlUsd ? p : best), wins[0]);
 }
 
 function worstTrade(closedPositions: ClosedTradeInput[]): TradeHighlight | null {
-  if (closedPositions.length === 0) return null;
-  return closedPositions.reduce((worst, p) => (p.realizedPnlUsd < worst.realizedPnlUsd ? p : worst), closedPositions[0]);
+  const losses = closedPositions.filter((p) => p.realizedPnlUsd < 0);
+  if (losses.length === 0) return null;
+  return losses.reduce((worst, p) => (p.realizedPnlUsd < worst.realizedPnlUsd ? p : worst), losses[0]);
 }
 
 function buildAdvisorExplanation(input: {
@@ -199,7 +214,7 @@ function buildAdvisorExplanation(input: {
 
   if (input.strategyHealth === "healthy") {
     sentences.push(
-      `Your strategy is currently healthy. It has respected all Level 1 limits, maintained exposure below the allowed ceiling, and produced a ${
+      `Risk controls are currently healthy. The strategy remains within current paper-risk limits, maintained exposure below the allowed ceiling, and produced a ${
         input.totalReturnPct >= 0 ? "positive" : "negative"
       } simulated return of ${input.totalReturnPct.toFixed(2)}%.`
     );
@@ -231,7 +246,7 @@ function buildAdvisorExplanation(input: {
       sentences.push("Paper trading should be paused until the breached limit is resolved. Real execution remains locked.");
       break;
     case "continue":
-      sentences.push("Real execution remains locked and gated for a future review.");
+      sentences.push("Continue paper monitoring only. Real execution remains locked and gated for a future review.");
       break;
   }
 
@@ -300,9 +315,20 @@ export function computeStrategyPerformance(input: StrategyPerformanceInput): Str
   const currentDrawdown = computeCurrentDrawdown(equityCurve);
 
   const profitFactor = computeProfitFactor(input.closedPositions);
+  const winningTradesCount = input.closedPositions.filter((p) => p.realizedPnlUsd > 0).length;
+  const losingTradesCount = input.closedPositions.filter((p) => p.realizedPnlUsd < 0).length;
+  const grossWinUsd = input.closedPositions.filter((p) => p.realizedPnlUsd > 0).reduce((sum, p) => sum + p.realizedPnlUsd, 0);
 
   const strategyHealth = classifyStrategyHealth({ riskHealth: input.riskHealth, currentDrawdownPct: currentDrawdown.pct });
-  const advisorRecommendation = recommendAdvisorAction({ strategyHealth, closedPositionsCount: input.closedPositions.length, profitFactor });
+  const advisorRecommendation = recommendAdvisorAction({
+    strategyHealth,
+    closedPositionsCount: input.closedPositions.length,
+    profitFactor,
+    totalReturnPct,
+    winningTradesCount,
+    losingTradesCount,
+    grossWinUsd,
+  });
 
   const maxExposureUsd = input.baseCapitalUsd * maxSimulatedExposureRatio;
   const exposureUsagePct = maxExposureUsd > 0 ? (input.openExposureUsd / maxExposureUsd) * 100 : 0;
