@@ -36,6 +36,10 @@ test("win rate is 100 when every closed position was profitable", () => {
   assert.equal(computeWinRate([trade(5), trade(1)]), 100);
 });
 
+test("flat trades do not count as wins", () => {
+  assert.equal(computeWinRate([trade(0), trade(0), trade(10), trade(-5)]), 25);
+});
+
 // ─── 2. Average win / average loss calculation ─────────────────────────────
 
 test("average win is the mean realized P&L of winning trades only", () => {
@@ -54,6 +58,14 @@ test("average loss is the mean realized P&L of losing trades only (negative)", (
 
 test("average loss is null when there are no losing trades", () => {
   assert.equal(computeAvgLoss([trade(5), trade(10)]), null);
+});
+
+test("flat trades do not count as wins or losses for averages", () => {
+  const positions = [trade(0), trade(0), trade(20), trade(-10)];
+  assert.equal(computeAvgWin(positions), 20);
+  assert.equal(computeAvgLoss(positions), -10);
+  assert.equal(computeAvgWin([trade(0), trade(0)]), null);
+  assert.equal(computeAvgLoss([trade(0), trade(0)]), null);
 });
 
 // ─── 3. Profit factor calculation ───────────────────────────────────────────
@@ -169,10 +181,18 @@ test("strategy health escalates to breached once drawdown alone is severe", () =
   assert.equal(classifyStrategyHealth({ riskHealth: "healthy", currentDrawdownPct: 35 }), "breached");
 });
 
+test("strategy health escalates exactly at the 15% caution drawdown threshold", () => {
+  assert.equal(classifyStrategyHealth({ riskHealth: "healthy", currentDrawdownPct: 15 }), "caution");
+});
+
+test("strategy health escalates exactly at the 30% breached drawdown threshold", () => {
+  assert.equal(classifyStrategyHealth({ riskHealth: "healthy", currentDrawdownPct: 30 }), "breached");
+});
+
 // ─── 7. Advisor recommendation when healthy but sample size is too small ───
 
 test("advisor recommends not_ready_for_real_execution when strategy is healthy but the closed-trade sample is small", () => {
-  const recommendation = recommendAdvisorAction({ strategyHealth: "healthy", closedPositionsCount: 2, profitFactor: 3 });
+  const recommendation = recommendAdvisorAction({ strategyHealth: "healthy", closedPositionsCount: 2, profitFactor: 3, totalReturnPct: 5, winningTradesCount: 2, losingTradesCount: 0, grossWinUsd: 50 });
   assert.equal(recommendation, "not_ready_for_real_execution");
   assert.ok(2 < MIN_CLOSED_POSITIONS_FOR_REAL_EXECUTION);
 });
@@ -199,12 +219,12 @@ test("full computeStrategyPerformance explains a healthy-but-small-sample strate
 // ─── 8. Advisor recommendation when drawdown is high ───────────────────────
 
 test("advisor recommends reduce_risk once elevated drawdown pushes strategy health to caution", () => {
-  const recommendation = recommendAdvisorAction({ strategyHealth: "caution", closedPositionsCount: 20, profitFactor: 2 });
+  const recommendation = recommendAdvisorAction({ strategyHealth: "caution", closedPositionsCount: 20, profitFactor: 2, totalReturnPct: 5, winningTradesCount: 10, losingTradesCount: 2, grossWinUsd: 200 });
   assert.equal(recommendation, "reduce_risk");
 });
 
 test("advisor recommends pause once severe drawdown pushes strategy health to breached", () => {
-  const recommendation = recommendAdvisorAction({ strategyHealth: "breached", closedPositionsCount: 20, profitFactor: 2 });
+  const recommendation = recommendAdvisorAction({ strategyHealth: "breached", closedPositionsCount: 20, profitFactor: 2, totalReturnPct: 5, winningTradesCount: 10, losingTradesCount: 2, grossWinUsd: 200 });
   assert.equal(recommendation, "pause");
 });
 
@@ -230,7 +250,7 @@ test("full computeStrategyPerformance recommends reduce_risk when current drawdo
 // ─── 9. Advisor recommendation when profit factor is below 1 ───────────────
 
 test("advisor recommends review_required when the closed-trade sample is large enough but profit factor is below 1", () => {
-  const recommendation = recommendAdvisorAction({ strategyHealth: "healthy", closedPositionsCount: 12, profitFactor: 0.6 });
+  const recommendation = recommendAdvisorAction({ strategyHealth: "healthy", closedPositionsCount: 12, profitFactor: 0.6, totalReturnPct: 5, winningTradesCount: 6, losingTradesCount: 6, grossWinUsd: 60 });
   assert.equal(recommendation, "review_required");
 });
 
@@ -256,6 +276,98 @@ test("full computeStrategyPerformance recommends review_required for a healthy-r
   assert.equal(performance.advisorRecommendation, "review_required");
   assert.equal(performance.realExecutionLocked, true);
   assert.match(performance.advisorExplanation, /profit factor/i);
+});
+
+test("10+ all-breakeven trades do not recommend continue", () => {
+  const performance = computeStrategyPerformance({
+    baseCapitalUsd: 1000,
+    closedPositions: Array.from({ length: 12 }, (_, i) => trade(0, `2026-01-01T${String(i).padStart(2, "0")}:00:00.000Z`)),
+    openPositionsCount: 0,
+    unrealizedPnlUsd: 0,
+    openExposureUsd: 0,
+    dailyRealizedPnlUsd: 0,
+    weeklyRealizedPnlUsd: 0,
+    riskHealth: "healthy",
+    nowIso: "2026-01-02T00:00:00.000Z",
+  });
+  assert.equal(performance.totalReturnPct, 0);
+  assert.equal(performance.winRatePct, 0);
+  assert.equal(performance.avgWinUsd, null);
+  assert.equal(performance.avgLossUsd, null);
+  assert.equal(performance.profitFactor, null);
+  assert.equal(performance.advisorRecommendation, "review_required");
+  assert.equal(performance.realExecutionLocked, true);
+});
+
+test("large all-winning sample with positive return may continue paper monitoring while real execution stays locked", () => {
+  const performance = computeStrategyPerformance({
+    baseCapitalUsd: 1000,
+    closedPositions: Array.from({ length: 12 }, (_, i) => trade(10, `2026-01-01T${String(i).padStart(2, "0")}:00:00.000Z`)),
+    openPositionsCount: 0,
+    unrealizedPnlUsd: 0,
+    openExposureUsd: 0,
+    dailyRealizedPnlUsd: 0,
+    weeklyRealizedPnlUsd: 120,
+    riskHealth: "healthy",
+    nowIso: "2026-01-02T00:00:00.000Z",
+  });
+  assert.equal(performance.profitFactor, null);
+  assert.equal(performance.totalReturnPct, 12);
+  assert.equal(performance.advisorRecommendation, "continue");
+  assert.match(performance.advisorExplanation, /Continue paper monitoring only/);
+  assert.equal(performance.realExecutionLocked, true);
+});
+
+test("zero base capital does not produce misleading percentages or continue recommendation", () => {
+  const performance = computeStrategyPerformance({
+    baseCapitalUsd: 0,
+    closedPositions: Array.from({ length: 12 }, (_, i) => trade(10, `2026-01-01T${String(i).padStart(2, "0")}:00:00.000Z`)),
+    openPositionsCount: 0,
+    unrealizedPnlUsd: 0,
+    openExposureUsd: 0,
+    dailyRealizedPnlUsd: 0,
+    weeklyRealizedPnlUsd: 120,
+    riskHealth: "healthy",
+    nowIso: "2026-01-02T00:00:00.000Z",
+  });
+  assert.equal(performance.totalReturnPct, 0);
+  assert.equal(performance.exposureUsagePct, 0);
+  assert.equal(performance.advisorRecommendation, "review_required");
+  assert.equal(performance.realExecutionLocked, true);
+});
+
+test("negative base capital does not produce misleading percentages or continue recommendation", () => {
+  const performance = computeStrategyPerformance({
+    baseCapitalUsd: -1000,
+    closedPositions: Array.from({ length: 12 }, (_, i) => trade(10, `2026-01-01T${String(i).padStart(2, "0")}:00:00.000Z`)),
+    openPositionsCount: 0,
+    unrealizedPnlUsd: 0,
+    openExposureUsd: 0,
+    dailyRealizedPnlUsd: 0,
+    weeklyRealizedPnlUsd: 120,
+    riskHealth: "healthy",
+    nowIso: "2026-01-02T00:00:00.000Z",
+  });
+  assert.equal(performance.totalReturnPct, 0);
+  assert.equal(performance.exposureUsagePct, 0);
+  assert.equal(performance.advisorRecommendation, "review_required");
+  assert.equal(performance.realExecutionLocked, true);
+});
+
+test("all-flat samples expose no meaningful best or worst trade", () => {
+  const performance = computeStrategyPerformance({
+    baseCapitalUsd: 1000,
+    closedPositions: Array.from({ length: 12 }, (_, i) => trade(0, `2026-01-01T${String(i).padStart(2, "0")}:00:00.000Z`)),
+    openPositionsCount: 0,
+    unrealizedPnlUsd: 0,
+    openExposureUsd: 0,
+    dailyRealizedPnlUsd: 0,
+    weeklyRealizedPnlUsd: 0,
+    riskHealth: "healthy",
+    nowIso: "2026-01-02T00:00:00.000Z",
+  });
+  assert.equal(performance.bestTrade, null);
+  assert.equal(performance.worstTrade, null);
 });
 
 // ─── 10. No real execution capability is unlocked by performance review ────
