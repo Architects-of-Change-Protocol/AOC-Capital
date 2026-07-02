@@ -39,8 +39,8 @@ type RuleCheck = (intent: CandidateTradeIntent, state: PortfolioRiskState) => Tr
 const noLeverage: RuleCheck = (intent) => ({
   ruleKey: "no_leverage",
   label: "No leverage",
-  passed: intent.leverage <= 1,
-  detail: intent.leverage <= 1 ? "Trade uses 1x (unleveraged) exposure." : `Trade requests ${intent.leverage}x leverage, which is not permitted.`,
+  passed: intent.leverage === 1,
+  detail: intent.leverage === 1 ? "Trade uses 1x (unleveraged) exposure." : `Trade requests ${intent.leverage}x leverage; Level 1 requires exactly 1x.`,
 });
 
 const noRealShorts: RuleCheck = (intent) => ({

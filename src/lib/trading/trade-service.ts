@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { evaluateTradeIntent, type CandidateTradeIntent, type PortfolioRiskState } from "./risk-policy-engine";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
+import type { PortfolioRiskState } from "./risk-policy-engine";
 import type {
-  AuditLedgerEventType,
   AuditLedgerRow,
   CapitalLevelRow,
   MarketSignalRow,
@@ -33,27 +33,25 @@ async function client() {
   return createSupabaseServerClient();
 }
 
-async function writeAuditEvent(
-  companyId: string,
-  eventType: AuditLedgerEventType,
-  subjectType: string,
-  subjectId: string,
-  actor: string,
-  payload: Record<string, unknown>
-) {
-  const supabase = await client();
-  await supabase.from("audit_ledger").insert({
-    company_id: companyId,
-    event_type: eventType,
-    subject_type: subjectType,
-    subject_id: subjectId,
-    actor,
-    payload,
+/**
+ * Governed trading tables are RLS-locked to SELECT-only for authenticated tenant
+ * members (see 20260901020000_aoc_capital_governed_writes.sql) — a browser
+ * Supabase client cannot write to trade_intents/paper_positions/trade_decisions/
+ * audit_ledger/etc directly. All writes go through this privileged, server-only
+ * client instead, so the risk policy engine can't be bypassed from the client.
+ */
+function privileged(routeId: string, operation: string, companyId: string, actorUserId?: string) {
+  return createSupabaseServiceRoleClient({
+    routeId,
+    operation,
+    reason: "aoc_capital_governed_write",
+    workspaceId: companyId,
+    ...(actorUserId ? { actorUserId } : { systemActor: "system" as const }),
   });
 }
 
 export async function getOrCreateDefaultPortfolio(companyId: string): Promise<PortfolioRow> {
-  const supabase = await client();
+  const supabase = privileged("trading/portfolio", "get_or_create_default_portfolio", companyId);
   const { data: existing } = await supabase
     .from("portfolios")
     .select("id,company_id,name,base_capital_usd,status,created_at")
@@ -70,12 +68,25 @@ export async function getOrCreateDefaultPortfolio(companyId: string): Promise<Po
     .select("id,company_id,name,base_capital_usd,status,created_at")
     .single();
 
-  if (error || !created) throw new Error(`Unable to create default portfolio: ${error?.message ?? "unknown error"}`);
+  if (error) {
+    // A concurrent request may have won the race to create the default portfolio
+    // (portfolios.company_id has a unique constraint) — fall back to the row it created.
+    if (error.code === "23505") {
+      const { data: raced } = await supabase
+        .from("portfolios")
+        .select("id,company_id,name,base_capital_usd,status,created_at")
+        .eq("company_id", companyId)
+        .single();
+      if (raced) return raced as PortfolioRow;
+    }
+    throw new Error(`Unable to create default portfolio: ${error.message}`);
+  }
+  if (!created) throw new Error("Unable to create default portfolio: no row returned.");
   return created as PortfolioRow;
 }
 
 export async function ensureRiskConstitution(companyId: string): Promise<RiskConstitutionRuleRow[]> {
-  const supabase = await client();
+  const supabase = privileged("trading/risk-constitution", "ensure_risk_constitution", companyId);
   const { data: existing } = await supabase
     .from("risk_constitution_rules")
     .select("id,company_id,rule_key,label,limit_value,is_active,level,description,created_at")
@@ -93,7 +104,7 @@ export async function ensureRiskConstitution(companyId: string): Promise<RiskCon
 }
 
 export async function ensureCapitalLevels(companyId: string, portfolio: PortfolioRow): Promise<CapitalLevelRow[]> {
-  const supabase = await client();
+  const supabase = privileged("trading/capital-levels", "ensure_capital_levels", companyId);
   const { data: existing } = await supabase
     .from("capital_levels")
     .select("id,company_id,portfolio_id,level_name,threshold_usd,status,created_at")
@@ -151,13 +162,15 @@ export async function listMarketSignals(companyId: string): Promise<MarketSignal
       company_id: companyId,
       symbol,
       signal_type: signalTypes[seed % signalTypes.length],
-      direction: directions[(seed >> 2) % directions.length],
+      direction: directions[(seed >>> 2) % directions.length],
       confidence: Math.round(((seed % 60) + 40)) / 100,
       note: `Deterministic mock signal for ${symbol}, generated ${seedDate} (index ${index}). No live exchange feed is connected.`,
     };
   });
 
-  await supabase.from("market_signals").insert(mock);
+  const privilegedSupabase = privileged("trading/market-signals", "seed_market_signals", companyId);
+  const { error: seedError } = await privilegedSupabase.from("market_signals").insert(mock);
+  if (seedError) throw new Error(`Unable to seed market signals: ${seedError.message}`);
   return fetchRecentSignals(companyId);
 }
 
@@ -218,6 +231,7 @@ async function getPortfolioRiskState(companyId: string, portfolio: PortfolioRow)
 
 export type CreateTradeIntentInput = {
   companyId: string;
+  actorUserId: string;
   actor: string;
   portfolioId: string;
   symbol: string;
@@ -236,114 +250,33 @@ export type CreateTradeIntentResult = {
 };
 
 /**
- * Creates a trade intent and immediately routes it through the Level 1 risk
- * policy engine. This is the single write path for trade intents — every
- * intent is evaluated and every verdict is recorded to the audit ledger here,
- * so callers cannot bypass governance by writing directly to trade_intents.
+ * Creates a trade intent and routes it through the Level 1 risk policy engine
+ * in a single database transaction (see evaluate_and_record_trade_intent in
+ * 20260901020000_aoc_capital_governed_writes.sql), serialized per portfolio
+ * via an advisory lock so concurrent requests can't both approve past a limit.
+ * This is the only write path for trade intents — combined with the
+ * SELECT-only RLS policies on the governed tables, callers cannot bypass
+ * governance by writing directly to trade_intents/paper_positions/etc.
  */
 export async function createTradeIntent(input: CreateTradeIntentInput): Promise<CreateTradeIntentResult> {
-  const supabase = await client();
+  const supabase = privileged("trading/trade-intents", "evaluate_and_record_trade_intent", input.companyId, input.actorUserId);
 
-  const { data: intent, error: intentError } = await supabase
-    .from("trade_intents")
-    .insert({
-      company_id: input.companyId,
-      portfolio_id: input.portfolioId,
-      symbol: input.symbol,
-      side: input.side,
-      quantity: input.quantity,
-      notional_usd: input.notionalUsd,
-      leverage: input.leverage ?? 1,
-      source: input.source ?? "manual",
-      signal_id: input.signalId ?? null,
-      created_by: input.actor,
-      status: "pending",
-    })
-    .select("id,company_id,portfolio_id,symbol,side,quantity,notional_usd,leverage,source,signal_id,status,created_by,created_at")
-    .single();
-
-  if (intentError || !intent) throw new Error(`Unable to create trade intent: ${intentError?.message ?? "unknown error"}`);
-  const intentRow = intent as TradeIntentRow;
-
-  await writeAuditEvent(input.companyId, "trade_intent_created", "trade_intent", intentRow.id, input.actor, {
-    symbol: intentRow.symbol,
-    side: intentRow.side,
-    quantity: intentRow.quantity,
-    notionalUsd: intentRow.notional_usd,
+  const { data, error } = await supabase.rpc("evaluate_and_record_trade_intent", {
+    p_company_id: input.companyId,
+    p_portfolio_id: input.portfolioId,
+    p_symbol: input.symbol,
+    p_side: input.side,
+    p_quantity: input.quantity,
+    p_notional_usd: input.notionalUsd,
+    p_leverage: input.leverage ?? 1,
+    p_source: input.source ?? "manual",
+    p_signal_id: input.signalId ?? null,
+    p_created_by: input.actor,
   });
 
-  const { data: portfolioRow, error: portfolioError } = await supabase
-    .from("portfolios")
-    .select("id,company_id,name,base_capital_usd,status,created_at")
-    .eq("id", input.portfolioId)
-    .single();
-  if (portfolioError || !portfolioRow) throw new Error(`Unable to load portfolio for evaluation: ${portfolioError?.message ?? "unknown error"}`);
-
-  const state = await getPortfolioRiskState(input.companyId, portfolioRow as PortfolioRow);
-  const candidate: CandidateTradeIntent = {
-    symbol: intentRow.symbol,
-    side: intentRow.side,
-    quantity: intentRow.quantity,
-    notionalUsd: intentRow.notional_usd,
-    leverage: intentRow.leverage,
-  };
-  const evaluation = evaluateTradeIntent(candidate, state);
-
-  const { data: decision, error: decisionError } = await supabase
-    .from("trade_decisions")
-    .insert({
-      company_id: input.companyId,
-      trade_intent_id: intentRow.id,
-      verdict: evaluation.verdict,
-      reasons: evaluation.reasons,
-      policy_version: evaluation.policyVersion,
-    })
-    .select("id,company_id,trade_intent_id,verdict,reasons,policy_version,decided_at")
-    .single();
-
-  if (decisionError || !decision) throw new Error(`Unable to record trade decision: ${decisionError?.message ?? "unknown error"}`);
-  const decisionRow = decision as TradeDecisionRow;
-
-  await supabase.from("trade_intents").update({ status: evaluation.verdict }).eq("id", intentRow.id);
-
-  await writeAuditEvent(
-    input.companyId,
-    evaluation.verdict === "approved" ? "trade_decision_approved" : "trade_decision_rejected",
-    "trade_intent",
-    intentRow.id,
-    "risk-policy-engine",
-    { verdict: evaluation.verdict, reasons: evaluation.reasons, policyVersion: evaluation.policyVersion }
-  );
-
-  let position: PaperPositionRow | null = null;
-  if (evaluation.verdict === "approved") {
-    const entryPrice = intentRow.notional_usd / intentRow.quantity;
-    const { data: createdPosition, error: positionError } = await supabase
-      .from("paper_positions")
-      .insert({
-        company_id: input.companyId,
-        portfolio_id: input.portfolioId,
-        trade_intent_id: intentRow.id,
-        symbol: intentRow.symbol,
-        side: intentRow.side,
-        quantity: intentRow.quantity,
-        entry_price: entryPrice,
-        status: "open",
-      })
-      .select("id,company_id,portfolio_id,trade_intent_id,symbol,side,quantity,entry_price,status,opened_at,closed_at,realized_pnl_usd")
-      .single();
-
-    if (positionError || !createdPosition) throw new Error(`Unable to open paper position: ${positionError?.message ?? "unknown error"}`);
-    position = createdPosition as PaperPositionRow;
-
-    await writeAuditEvent(input.companyId, "position_opened", "paper_position", position.id, "risk-policy-engine", {
-      symbol: position.symbol,
-      quantity: position.quantity,
-      entryPrice: position.entry_price,
-    });
-  }
-
-  return { intent: { ...intentRow, status: evaluation.verdict }, decision: decisionRow, position };
+  if (error) throw new Error(`Unable to evaluate trade intent: ${error.message}`);
+  const result = data as CreateTradeIntentResult;
+  return result;
 }
 
 export async function listTradeIntents(companyId: string): Promise<TradeIntentRow[]> {

@@ -34,18 +34,25 @@ export async function POST(request: Request) {
   }
 
   const portfolio = await getOrCreateDefaultPortfolio(user.companyId);
-  const result = await createTradeIntent({
-    companyId: user.companyId,
-    actor: user.email,
-    portfolioId: portfolio.id,
-    symbol: body.symbol.trim().toUpperCase(),
-    side: body.side,
-    quantity,
-    notionalUsd,
-    leverage,
-    source: body.signalId ? "signal" : "manual",
-    signalId: body.signalId ?? null,
-  });
-
-  return NextResponse.json(result, { status: 201 });
+  try {
+    const result = await createTradeIntent({
+      companyId: user.companyId,
+      actorUserId: user.id,
+      actor: user.email,
+      portfolioId: portfolio.id,
+      symbol: body.symbol.trim().toUpperCase(),
+      side: body.side,
+      quantity,
+      notionalUsd,
+      leverage,
+      source: body.signalId ? "signal" : "manual",
+      signalId: body.signalId ?? null,
+    });
+    return NextResponse.json(result, { status: 201 });
+  } catch (error) {
+    if (error instanceof Error && error.message.toLowerCase().includes("invalid signalid")) {
+      return NextResponse.json({ error: "signalId is invalid for this workspace." }, { status: 400 });
+    }
+    throw error;
+  }
 }

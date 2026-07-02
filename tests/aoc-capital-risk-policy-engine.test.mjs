@@ -32,6 +32,13 @@ test("leveraged trade intents are rejected (no leverage)", () => {
   assert.equal(rule.passed, false);
 });
 
+test("sub-1x leverage is also rejected — Level 1 requires exactly 1x", () => {
+  const result = evaluateTradeIntent({ ...baseIntent(), leverage: 0.5 }, baseState());
+  assert.equal(result.verdict, "rejected");
+  const rule = result.reasons.find((r) => r.ruleKey === "no_leverage");
+  assert.equal(rule.passed, false);
+});
+
 test("short-side trade intents are rejected (no real shorts)", () => {
   const result = evaluateTradeIntent({ ...baseIntent(), side: "sell" }, baseState());
   assert.equal(result.verdict, "rejected");
