@@ -5,12 +5,19 @@
 // and createTradeIntent() / closePaperPosition() / markPositionToMarket()
 // (trade-service.ts), which in turn are the only callers of
 // evaluate_and_record_trade_intent() / close_paper_position() /
-// mark_paper_position(). This module adds no new privileged writes of its
-// own beyond a single audit_ledger row (via recordAuditEvent) marking the
-// scenario complete — it never bypasses the risk policy engine, never writes
-// paper_positions/trade_intents/trade_decisions directly, and never unlocks
-// real execution. Idempotent: once the 'demo_scenario_loaded' marker exists
-// for a company, calling loadDemoScenario() again is a no-op.
+// mark_paper_position(). This module never bypasses the risk policy engine,
+// never writes paper_positions/trade_intents/trade_decisions directly, and
+// never unlocks real execution.
+//
+// Idempotent: once the 'demo_scenario_loaded' marker exists for a company,
+// calling loadDemoScenario() again is a no-op. That marker's payload also
+// carries a DemoScenarioManifest (manifest.ts) — the exact set of row ids the
+// run created — so resetDemoScenario() can undo a load precisely: it only
+// ever deletes rows named in that manifest, scoped to the caller's
+// company_id, never a broader "everything of this type" or "everything
+// recent" delete. This keeps Reset Demo safe to run against a company that
+// also has real (non-demo) portfolio activity — nothing outside the
+// manifest is ever touched.
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { confirmAdvisorRecommendation } from "@/lib/advisor/advisor-write-service";
@@ -21,24 +28,70 @@ import {
   listMarketSignals,
   listPaperPositions,
   markPositionToMarket,
+  privileged,
   recordAuditEvent,
 } from "@/lib/trading/trade-service";
 import type { PaperPositionRow, PortfolioRow, TradeDecisionReason } from "@/lib/trading/database-contract";
 import { DEMO_INTAKE, buildDemoScenarioPlan, type DemoTradeIntentStep, type DemoTradeStepId } from "./scenario";
+import { buildDemoScenarioPayload, parseDemoManifest, type DemoScenarioManifest } from "./manifest";
 
 export const DEMO_SCENARIO_EVENT_TYPE = "demo_scenario_loaded" as const;
+export const DEMO_SCENARIO_RESET_EVENT_TYPE = "demo_scenario_reset" as const;
 
 /** Reads whether the demo scenario marker exists for this company — the idempotency check. Read-only; no writes. */
 export async function isDemoScenarioLoaded(companyId: string): Promise<boolean> {
+  const marker = await findDemoMarker(companyId);
+  return marker !== null;
+}
+
+async function findDemoMarker(companyId: string): Promise<{ id: string; payload: unknown } | null> {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from("audit_ledger")
-    .select("id")
+    .select("id, payload")
     .eq("company_id", companyId)
     .eq("event_type", DEMO_SCENARIO_EVENT_TYPE)
+    .order("occurred_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return data !== null && data !== undefined;
+  return (data as { id: string; payload: unknown } | null) ?? null;
+}
+
+/** Fetches the ids of the two audit_ledger rows an advisor confirmation just wrote for `portfolioId`, one per event type. Precise (ordered by recency, one per type), so a prior real advisor run for the same portfolio is never picked up. */
+async function fetchJustWrittenAdvisorAuditEventIds(companyId: string, portfolioId: string): Promise<string[]> {
+  const supabase = await createSupabaseServerClient();
+  const eventTypes = ["advisor_strategy_generated", "advisor_constitution_generated"] as const;
+  const ids: string[] = [];
+  for (const eventType of eventTypes) {
+    const { data } = await supabase
+      .from("audit_ledger")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("subject_type", "portfolio")
+      .eq("subject_id", portfolioId)
+      .eq("event_type", eventType)
+      .order("occurred_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) ids.push((data as { id: string }).id);
+  }
+  return ids;
+}
+
+/** Fetches audit_ledger ids whose subject is exactly one of the trade intents or paper positions the scenario created — an identity match, not a time window, so it can never pick up unrelated real activity. */
+async function fetchTradeAndPositionAuditEventIds(companyId: string, tradeIntentIds: string[], paperPositionIds: string[]): Promise<string[]> {
+  const supabase = await createSupabaseServerClient();
+  const ids: string[] = [];
+
+  if (tradeIntentIds.length > 0) {
+    const { data } = await supabase.from("audit_ledger").select("id").eq("company_id", companyId).eq("subject_type", "trade_intent").in("subject_id", tradeIntentIds);
+    for (const row of (data ?? []) as { id: string }[]) ids.push(row.id);
+  }
+  if (paperPositionIds.length > 0) {
+    const { data } = await supabase.from("audit_ledger").select("id").eq("company_id", companyId).eq("subject_type", "paper_position").in("subject_id", paperPositionIds);
+    for (const row of (data ?? []) as { id: string }[]) ids.push(row.id);
+  }
+  return ids;
 }
 
 export type DemoStepResult = {
@@ -68,9 +121,10 @@ export type LoadDemoScenarioInput = {
  * Loads the demo scenario: advisor confirmation -> seeded market signals ->
  * scripted trade intents (each evaluated live by the Level 1 risk policy
  * engine) -> closes for the two "close" steps -> an audited mark-to-market on
- * every position still open -> a final demo_scenario_loaded audit marker.
- * Every write goes through the same governed paths a real user's actions
- * would use; this function only sequences them.
+ * every position still open -> a final demo_scenario_loaded audit marker
+ * whose payload carries the DemoScenarioManifest for Reset Demo. Every write
+ * goes through the same governed paths a real user's actions would use; this
+ * function only sequences them and records what it did.
  */
 export async function loadDemoScenario(input: LoadDemoScenarioInput): Promise<LoadDemoScenarioResult> {
   const { companyId, actorUserId, actor } = input;
@@ -82,6 +136,7 @@ export async function loadDemoScenario(input: LoadDemoScenarioInput): Promise<Lo
   const confirmResult = await confirmAdvisorRecommendation({ companyId, actorUserId, actor, intake: DEMO_INTAKE });
   const recommendation = confirmResult.recommendation;
   const portfolio = confirmResult.portfolio;
+  const advisorAuditEventIds = await fetchJustWrittenAdvisorAuditEventIds(companyId, portfolio.id);
 
   const signals = await listMarketSignals(companyId);
   const signalIdBySymbol = new Map(signals.map((signal) => [signal.symbol, signal.id]));
@@ -89,6 +144,7 @@ export async function loadDemoScenario(input: LoadDemoScenarioInput): Promise<Lo
   const plan = buildDemoScenarioPlan(new Date());
   const steps: DemoStepResult[] = [];
   const positionsByStepId = new Map<DemoTradeStepId, PaperPositionRow>();
+  const tradeIntentIds: string[] = [];
 
   for (const action of plan) {
     if (action.kind === "submit_intent") {
@@ -109,6 +165,7 @@ export async function loadDemoScenario(input: LoadDemoScenarioInput): Promise<Lo
         signalId,
       });
 
+      tradeIntentIds.push(result.intent.id);
       if (result.position) positionsByStepId.set(step.id, result.position);
       steps.push({ step, verdict: result.decision.verdict, reasons: result.decision.reasons, position: result.position, closedRealizedPnlUsd: null });
       continue;
@@ -143,6 +200,16 @@ export async function loadDemoScenario(input: LoadDemoScenarioInput): Promise<Lo
     await markPositionToMarket(companyId, position.id, actor, actorUserId, { audit: true });
   }
 
+  const paperPositionIds = Array.from(positionsByStepId.values()).map((position) => position.id);
+  const tradeAndPositionAuditEventIds = await fetchTradeAndPositionAuditEventIds(companyId, tradeIntentIds, paperPositionIds);
+
+  const manifest: DemoScenarioManifest = {
+    portfolioId: portfolio.id,
+    tradeIntentIds,
+    paperPositionIds,
+    auditEventIds: [...advisorAuditEventIds, ...tradeAndPositionAuditEventIds],
+  };
+
   await recordAuditEvent(
     {
       company_id: companyId,
@@ -150,17 +217,74 @@ export async function loadDemoScenario(input: LoadDemoScenarioInput): Promise<Lo
       subject_type: "portfolio",
       subject_id: portfolio.id,
       actor,
-      payload: {
+      payload: buildDemoScenarioPayload({
         stepCount: steps.length,
         approvedCount: steps.filter((s) => s.verdict === "approved").length,
         rejectedCount: steps.filter((s) => s.verdict === "rejected").length,
         closedCount: steps.filter((s) => s.closedRealizedPnlUsd !== null).length,
         openCount: openPositions.length,
-        paperOnly: true,
-      },
+        manifest,
+      }),
     },
     actorUserId
   );
 
   return { alreadyLoaded: false, recommendation, portfolio, steps };
+}
+
+export type ResetDemoScenarioResult =
+  | { reset: false; reason: "not_loaded" | "manifest_unreadable" }
+  | { reset: true; removedTradeIntents: number; removedPaperPositions: number; removedAuditEvents: number };
+
+/**
+ * Reverses a demo load: deletes only the rows named in the loaded run's
+ * DemoScenarioManifest, scoped to the caller's company_id. Deleting
+ * trade_intents cascades (via existing FK constraints — see
+ * 20260901000000_aoc_capital_paper_trading.sql) to their trade_decisions and
+ * paper_positions rows, so those never need a separate delete call. The
+ * portfolio row, its base_capital_usd, the applied risk constitution, and
+ * capital_levels are intentionally left untouched — they are shared,
+ * singleton-per-company resources also used by real (non-demo) activity, not
+ * "demo scenario data." After a successful reset, isDemoScenarioLoaded()
+ * returns false again, so the demo can be reloaded from a clean slate.
+ */
+export async function resetDemoScenario(input: LoadDemoScenarioInput): Promise<ResetDemoScenarioResult> {
+  const { companyId, actorUserId, actor } = input;
+
+  const marker = await findDemoMarker(companyId);
+  if (!marker) return { reset: false, reason: "not_loaded" };
+
+  const manifest = parseDemoManifest(marker.payload);
+  if (!manifest) return { reset: false, reason: "manifest_unreadable" };
+
+  const service = privileged("demo/reset", "reset_demo_scenario", companyId, actorUserId);
+
+  let removedTradeIntents = 0;
+  if (manifest.tradeIntentIds.length > 0) {
+    const { data } = await service.from("trade_intents").delete().eq("company_id", companyId).in("id", manifest.tradeIntentIds).select("id");
+    removedTradeIntents = data?.length ?? 0;
+  }
+
+  const auditEventIdsToDelete = [...manifest.auditEventIds, marker.id];
+  const { data: deletedAudit } = await service.from("audit_ledger").delete().eq("company_id", companyId).in("id", auditEventIdsToDelete).select("id");
+  const removedAuditEvents = deletedAudit?.length ?? 0;
+
+  await recordAuditEvent(
+    {
+      company_id: companyId,
+      event_type: DEMO_SCENARIO_RESET_EVENT_TYPE,
+      subject_type: "portfolio",
+      subject_id: manifest.portfolioId,
+      actor,
+      payload: {
+        paperOnly: true,
+        removedTradeIntents,
+        removedPaperPositions: manifest.paperPositionIds.length,
+        removedAuditEvents,
+      },
+    },
+    actorUserId
+  );
+
+  return { reset: true, removedTradeIntents, removedPaperPositions: manifest.paperPositionIds.length, removedAuditEvents };
 }

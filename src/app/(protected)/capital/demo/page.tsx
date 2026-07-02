@@ -7,13 +7,16 @@ import {
   ensureRiskConstitution,
   getStrategyPerformance,
   listAuditLedger,
+  listPaperPositions,
   listTradeDecisions,
   listTradeIntents,
   loadPortfolioOverview,
 } from "@/lib/trading/trade-service";
+import type { AuditLedgerRow, PaperPositionRow, TradeDecisionRow, TradeIntentRow } from "@/lib/trading/database-contract";
 import type { StrategyHealth } from "@/lib/trading/portfolio-summary";
 import type { AdvisorRecommendationAction } from "@/lib/trading/strategy-performance";
 import { DemoLoadButton } from "./demo-load-button";
+import { DemoResetButton } from "./demo-reset-button";
 
 const PIPELINE_STAGES = [
   "Advisor intake → Strategy Brief",
@@ -26,6 +29,17 @@ const PIPELINE_STAGES = [
   "Two positions left open, showing live unrealized P&L",
   "Strategy Performance Review computed from the resulting trade history",
   "Every step recorded in the audit ledger",
+];
+
+const CURATED_DISCLOSURE =
+  "This is a curated paper-only scenario generated to demonstrate AOC Capital's governance behavior. It is not a historical backtest, live market result, or guarantee of future performance.";
+
+const GUIDANCE_LINKS = [
+  { href: "/capital/performance", label: "Strategy Performance" },
+  { href: "/capital/positions", label: "Paper Positions" },
+  { href: "/capital/audit-ledger", label: "Audit Ledger" },
+  { href: "/capital/risk-constitution", label: "Risk Constitution" },
+  { href: "/capital/trade-intents", label: "Trade Intents" },
 ];
 
 const DECISION_STATUS_STYLE: Record<string, string> = {
@@ -53,6 +67,75 @@ function pnlClassName(value: number): string {
   return "text-slate-300";
 }
 
+type StatusCounts = {
+  tradeIntents: number;
+  approvedDecisions: number;
+  rejectedDecisions: number;
+  openPositions: number;
+  closedPositions: number;
+  auditEvents: number;
+};
+
+function computeStatusCounts(intents: TradeIntentRow[], decisions: TradeDecisionRow[], positions: PaperPositionRow[], auditEvents: AuditLedgerRow[]): StatusCounts {
+  return {
+    tradeIntents: intents.length,
+    approvedDecisions: decisions.filter((d) => d.verdict === "approved").length,
+    rejectedDecisions: decisions.filter((d) => d.verdict === "rejected").length,
+    openPositions: positions.filter((p) => p.status === "open").length,
+    closedPositions: positions.filter((p) => p.status === "closed").length,
+    auditEvents: auditEvents.length,
+  };
+}
+
+function StatusPanel({ loaded, counts }: { loaded: boolean; counts: StatusCounts }) {
+  const tiles: Array<{ label: string; value: string }> = [
+    { label: "Trade intents", value: `${counts.tradeIntents}` },
+    { label: "Approved decisions", value: `${counts.approvedDecisions}` },
+    { label: "Rejected decisions", value: `${counts.rejectedDecisions}` },
+    { label: "Open positions", value: `${counts.openPositions}` },
+    { label: "Closed positions", value: `${counts.closedPositions}` },
+    { label: "Audit events", value: `${counts.auditEvents}` },
+    { label: "Real execution", value: "Locked" },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Demo Status</h3>
+        <span
+          className={`rounded-full border px-3 py-1 text-xs font-medium ${
+            loaded ? "border-emerald-300/30 bg-emerald-300/[0.08] text-emerald-200" : "border-white/10 bg-white/5 text-slate-300"
+          }`}
+        >
+          {loaded ? "Loaded" : "Not loaded"}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        {tiles.map((tile) => (
+          <div key={tile.label} className="rounded-xl border border-white/5 bg-black/10 px-3 py-2 text-sm">
+            <p className="text-xs uppercase tracking-[0.15em] text-slate-500">{tile.label}</p>
+            <p className={`mt-1 font-medium ${tile.label === "Real execution" ? "text-cyan-200" : "text-white"}`}>{tile.value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4">
+        <p className="mb-2 text-xs uppercase tracking-[0.2em] text-slate-500">Explore the results</p>
+        <div className="flex flex-wrap gap-2">
+          {GUIDANCE_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-200 transition hover:border-cyan-200/30 hover:bg-cyan-300/[0.07] hover:text-cyan-100"
+            >
+              {link.label} →
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SectionCard({ step, title, subtitle, children }: { step: number; title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -75,19 +158,30 @@ export default async function DemoSandboxPage() {
   const loaded = await isDemoScenarioLoaded(user.companyId);
 
   if (!loaded) {
+    const [intents, decisions, positions, auditEvents] = await Promise.all([
+      listTradeIntents(user.companyId),
+      listTradeDecisions(user.companyId),
+      listPaperPositions(user.companyId),
+      listAuditLedger(user.companyId),
+    ]);
+    const counts = computeStatusCounts(intents, decisions, positions, auditEvents);
+
     return (
       <div className="space-y-6">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs uppercase tracking-[0.2em] text-slate-400">
           Paper only · Simulation mode · No real money is being traded
         </div>
 
+        <StatusPanel loaded={false} counts={counts} />
+
         <div className="rounded-2xl border border-cyan-200/30 bg-cyan-300/[0.06] p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">Demo Strategy Sandbox</p>
-          <h2 className="mt-1 text-xl font-semibold text-white">See the entire AOC Capital story in one click</h2>
+          <h2 className="mt-1 text-xl font-semibold text-white">Level 1 Governed Crypto Trend Sandbox</h2>
           <p className="mt-2 max-w-2xl text-sm text-slate-300">
             Loads one coherent, deterministic paper-trading scenario through the same governed write paths a real user&apos;s actions go
-            through — nothing here bypasses the Level 1 risk policy engine, and nothing unlocks real execution. Everything stays paper-only,
-            simulated, and fully audited.
+            through — nothing here bypasses the Level 1 risk policy engine, and nothing unlocks real execution. It trades a small crypto
+            basket only (BTC-USD, ETH-USD, SOL-USD, AVAX-USD): signal-informed and manual trend-following trade intents, moving through
+            Level 1 governance.
           </p>
 
           <ol className="mt-4 space-y-1.5 text-sm text-slate-300">
@@ -103,6 +197,8 @@ export default async function DemoSandboxPage() {
             <DemoLoadButton />
           </div>
         </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-400">{CURATED_DISCLOSURE}</div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-400">
           This does not implement real exchange execution, broker integrations, API keys, withdrawals, or live order routing. No real money
@@ -125,6 +221,7 @@ export default async function DemoSandboxPage() {
     listAuditLedger(user.companyId),
   ]);
 
+  const counts = computeStatusCounts(intents, decisions, overview.positions, auditEvents);
   const decisionByIntent = new Map(decisions.map((d) => [d.trade_intent_id, d]));
 
   // The plan's entry prices are steered by the current UTC hour bucket, but
@@ -154,17 +251,24 @@ export default async function DemoSandboxPage() {
         Paper only · Simulation mode · No real money is being traded
       </div>
 
+      <StatusPanel loaded={true} counts={counts} />
+
       <div className="flex flex-col gap-3 rounded-2xl border border-emerald-300/30 bg-emerald-300/[0.06] p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Demo Strategy Sandbox</p>
           <h2 className="mt-1 text-xl font-semibold text-white">Scenario loaded — {overview.portfolio.name}</h2>
           <p className="mt-1 text-sm text-slate-300">
-            This scenario runs once per workspace through the real governed write paths above — reload this page any time to review it
-            again.
+            This scenario runs once per workspace through the real governed write paths above. Reset Demo removes only this scenario&apos;s
+            trade intents, positions, and audit events — never any other portfolio activity — so it can be reloaded from a clean slate.
           </p>
         </div>
-        <span className={`rounded-full border px-4 py-1.5 text-sm font-medium ${healthCopy.className}`}>Strategy Health: {healthCopy.label}</span>
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          <span className={`rounded-full border px-4 py-1.5 text-sm font-medium ${healthCopy.className}`}>Strategy Health: {healthCopy.label}</span>
+          <DemoResetButton />
+        </div>
       </div>
+
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-400">{CURATED_DISCLOSURE}</div>
 
       <SectionCard step={1} title="Advisor → Strategy Brief" subtitle="Guided onboarding output for this scenario's intake.">
         <p className="text-lg font-semibold text-white">{recommendation.brief.headline}</p>

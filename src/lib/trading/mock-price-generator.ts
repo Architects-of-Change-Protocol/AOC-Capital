@@ -8,6 +8,7 @@ const BASE_PRICE_USD: Record<string, number> = {
   "BTC-USD": 65000,
   "ETH-USD": 3200,
   "SOL-USD": 145,
+  "AVAX-USD": 32,
   AAPL: 195,
   SPY: 520,
 };

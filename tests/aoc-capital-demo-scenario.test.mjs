@@ -8,10 +8,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const { buildDemoScenarioPlan, DEMO_INTAKE } = await import("../src/lib/demo/scenario.ts");
+const { buildDemoScenarioPlan, DEMO_INTAKE, DEMO_SYMBOLS } = await import("../src/lib/demo/scenario.ts");
 const { runAdvisorRecommendation } = await import("../src/lib/advisor/advisor-engine.ts");
 const { evaluateTradeIntent } = await import("../src/lib/trading/risk-policy-engine.ts");
 const { getSimulatedPrice } = await import("../src/lib/trading/mock-price-generator.ts");
+const { deriveCapabilities, ALWAYS_BLOCKED_CAPABILITIES } = await import("../src/lib/advisor/capabilities.ts");
 
 const NOW = new Date("2026-07-02T15:00:00Z");
 
@@ -37,7 +38,7 @@ test("the plan's action order is submit x3, submit (rejected), close x2, submit"
   const plan = buildDemoScenarioPlan(NOW);
   assert.deepEqual(
     plan.map((action) => (action.kind === "submit_intent" ? `submit:${action.step.id}` : `close:${action.close.refId}`)),
-    ["submit:btc_signal_win", "submit:eth_signal_hold", "submit:sol_manual_loss", "submit:aapl_overleveraged_rejected", "close:btc_signal_win", "close:sol_manual_loss", "submit:aapl_manual_hold"]
+    ["submit:btc_signal_win", "submit:eth_signal_hold", "submit:sol_manual_loss", "submit:avax_overleveraged_rejected", "close:btc_signal_win", "close:sol_manual_loss", "submit:avax_manual_hold"]
   );
 });
 
@@ -76,7 +77,7 @@ function replayPlan(plan) {
   return decisions;
 }
 
-test("the scripted plan is approved for the three initial opens and the final AAPL open, and rejected only for the over-leveraged attempt", () => {
+test("the scripted plan is approved for the three initial opens and the final AVAX-USD open, and rejected only for the over-leveraged attempt", () => {
   const plan = buildDemoScenarioPlan(NOW);
   const decisions = replayPlan(plan);
 
@@ -84,14 +85,14 @@ test("the scripted plan is approved for the three initial opens and the final AA
   assert.equal(verdictById.get("btc_signal_win"), "approved");
   assert.equal(verdictById.get("eth_signal_hold"), "approved");
   assert.equal(verdictById.get("sol_manual_loss"), "approved");
-  assert.equal(verdictById.get("aapl_overleveraged_rejected"), "rejected");
-  assert.equal(verdictById.get("aapl_manual_hold"), "approved");
+  assert.equal(verdictById.get("avax_overleveraged_rejected"), "rejected");
+  assert.equal(verdictById.get("avax_manual_hold"), "approved");
 });
 
-test("the over-leveraged AAPL attempt is rejected on both no_leverage and max_open_positions simultaneously", () => {
+test("the over-leveraged AVAX-USD attempt is rejected on both no_leverage and max_open_positions simultaneously", () => {
   const plan = buildDemoScenarioPlan(NOW);
   const decisions = replayPlan(plan);
-  const rejected = decisions.find((d) => d.id === "aapl_overleveraged_rejected");
+  const rejected = decisions.find((d) => d.id === "avax_overleveraged_rejected");
 
   const failing = rejected.evaluation.reasons.filter((r) => !r.passed).map((r) => r.ruleKey);
   assert.ok(failing.includes("no_leverage"));
@@ -125,4 +126,38 @@ test("closing BTC-USD and SOL-USD at the same-bucket simulated price realizes a 
   assert.ok(solRealizedPnlUsd < 0, `expected SOL-USD to realize a loss, got ${solRealizedPnlUsd}`);
   // Both stay comfortably inside the real $20 daily / $40 weekly loss ceiling.
   assert.ok(btcRealizedPnlUsd + solRealizedPnlUsd > -20);
+});
+
+test("the scenario's symbol set matches the crypto trend sandbox story — only DEMO_SYMBOLS, never equities", () => {
+  const plan = buildDemoScenarioPlan(NOW);
+  const symbolsInPlan = new Set(plan.filter((a) => a.kind === "submit_intent").map((a) => a.step.symbol));
+
+  assert.deepEqual(DEMO_SYMBOLS, ["BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD"]);
+  for (const symbol of symbolsInPlan) {
+    assert.ok(DEMO_SYMBOLS.includes(symbol), `${symbol} is not one of the declared DEMO_SYMBOLS`);
+  }
+  assert.ok(!symbolsInPlan.has("AAPL"), "the crypto trend sandbox should not trade equities");
+  assert.ok(!symbolsInPlan.has("SPY"), "the crypto trend sandbox should not trade equities");
+});
+
+test("DEMO_INTAKE only requests crypto markets, matching the symbols the plan actually trades", () => {
+  assert.deepEqual(DEMO_INTAKE.preferredMarkets, ["crypto"]);
+});
+
+test("the demo's derived capabilities never include real execution, broker, API key, withdrawal, or live order routing", () => {
+  const capabilities = deriveCapabilities(DEMO_INTAKE);
+
+  // Every hard-coded blocked capability from capabilities.ts must be present in the blocked list.
+  for (const blocked of ALWAYS_BLOCKED_CAPABILITIES) {
+    assert.ok(capabilities.blocked.includes(blocked), `expected ${blocked} to be blocked`);
+  }
+  // None of them may ever leak into the allowed list.
+  for (const blocked of ALWAYS_BLOCKED_CAPABILITIES) {
+    assert.ok(!capabilities.allowed.includes(blocked), `${blocked} must never be allowed`);
+  }
+  assert.ok(ALWAYS_BLOCKED_CAPABILITIES.includes("real_exchange_execution"));
+  assert.ok(ALWAYS_BLOCKED_CAPABILITIES.includes("broker_api_integration"));
+  assert.ok(ALWAYS_BLOCKED_CAPABILITIES.includes("live_order_routing"));
+  assert.ok(ALWAYS_BLOCKED_CAPABILITIES.includes("real_money_withdrawal"));
+  assert.ok(ALWAYS_BLOCKED_CAPABILITIES.includes("exchange_api_key_management"));
 });

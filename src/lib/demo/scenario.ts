@@ -1,5 +1,10 @@
 // AOC Capital Demo Strategy Sandbox — canned scenario definition (PR #5).
 //
+// This is a Level 1 Governed Crypto Trend Sandbox: every symbol traded below
+// is a crypto major (BTC-USD, ETH-USD, SOL-USD, AVAX-USD), so the story stays
+// coherent as "a crypto trend-following paper strategy" rather than drifting
+// into an unexplained multi-asset mix.
+//
 // Pure module: no I/O. Describes one coherent, deterministic strategy story —
 // a Level 1 advisor intake plus a scripted, strictly-ordered sequence of
 // governed actions — that, when run through the real write paths
@@ -26,12 +31,16 @@ import { getSimulatedPrice } from "@/lib/trading/mock-price-generator";
 import type { AdvisorIntake } from "@/lib/advisor/types";
 import type { CloseReason, TradeIntentSide } from "@/lib/trading/database-contract";
 
+/** Every symbol this scenario ever submits a trade intent for — a fixed crypto basket, never equities. */
+export const DEMO_SYMBOLS = ["BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD"] as const;
+
 /**
  * Canned advisor intake for the demo. Maps to a "growth" risk profile
  * (aggressive appetite + 25% tolerable drawdown, taking the more conservative
  * of the two per risk-profile.ts) with a $5,000 sandbox ceiling — plenty of
  * room to open three positions concurrently while staying well inside the
  * real Level 1 exposure and loss ceilings enforced by the risk policy engine.
+ * preferredMarkets is crypto-only, matching every symbol the scenario trades.
  */
 export const DEMO_INTAKE: AdvisorIntake = {
   startingCapitalUsd: 5000,
@@ -39,13 +48,13 @@ export const DEMO_INTAKE: AdvisorIntake = {
   timeHorizon: "medium_term",
   riskAppetite: "aggressive",
   maxTolerableDrawdownPct: 25,
-  preferredMarkets: ["crypto", "equities"],
+  preferredMarkets: ["crypto"],
   autonomyLevel: "assisted",
   tradingMode: "recommendations_only",
   wantsGatedRealExecution: false,
 };
 
-export type DemoTradeStepId = "btc_signal_win" | "eth_signal_hold" | "sol_manual_loss" | "aapl_overleveraged_rejected" | "aapl_manual_hold";
+export type DemoTradeStepId = "btc_signal_win" | "eth_signal_hold" | "sol_manual_loss" | "avax_overleveraged_rejected" | "avax_manual_hold";
 
 export type DemoTradeIntentStep = {
   id: DemoTradeStepId;
@@ -87,25 +96,25 @@ function roundQuantity(value: number, decimals: number): number {
  *
  *  1-3. Open BTC-USD, ETH-USD, SOL-USD — all approved, bringing the
  *       portfolio to exactly the 3-open-position ceiling.
- *  4.   Attempt a 3x-leveraged AAPL trade while at that ceiling — rejected on
- *       both no_leverage and max_open_positions simultaneously.
+ *  4.   Attempt a 3x-leveraged AVAX-USD trade while at that ceiling —
+ *       rejected on both no_leverage and max_open_positions simultaneously.
  *  5-6. Close BTC-USD (winner) and SOL-USD (loser), freeing exposure and a
  *       position slot.
- *  7.   Open a properly-sized, unleveraged AAPL trade — approved.
+ *  7.   Open a properly-sized, unleveraged AVAX-USD trade — approved.
  *
- * ETH-USD and the second AAPL position are left open for live mark-to-market.
+ * ETH-USD and the second AVAX-USD position are left open for live mark-to-market.
  */
 export function buildDemoScenarioPlan(now: Date = new Date()): DemoScenarioAction[] {
   const btcPrice = getSimulatedPrice("BTC-USD", now);
   const ethPrice = getSimulatedPrice("ETH-USD", now);
   const solPrice = getSimulatedPrice("SOL-USD", now);
-  const aaplPrice = getSimulatedPrice("AAPL", now);
+  const avaxPrice = getSimulatedPrice("AVAX-USD", now);
 
   const btcEntry = round2(btcPrice * 0.98); // ~2% below sim price -> closes as a winner
   const ethEntry = round2(ethPrice * 1.01); // ~1% above sim price -> sits at a small open loss
   const solEntry = round2(solPrice * 1.02); // ~2% above sim price -> closes as a loser
-  const aaplRejectedEntry = round2(aaplPrice);
-  const aaplEntry = round2(aaplPrice * 0.99); // ~1% below sim price -> sits at a small open gain
+  const avaxRejectedEntry = round2(avaxPrice);
+  const avaxEntry = round2(avaxPrice * 0.99); // ~1% below sim price -> sits at a small open gain
 
   return [
     {
@@ -152,15 +161,15 @@ export function buildDemoScenarioPlan(now: Date = new Date()): DemoScenarioActio
     {
       kind: "submit_intent",
       step: {
-        id: "aapl_overleveraged_rejected",
-        symbol: "AAPL",
+        id: "avax_overleveraged_rejected",
+        symbol: "AVAX-USD",
         side: "buy",
         notionalUsd: 500,
-        quantity: roundQuantity(500 / aaplRejectedEntry, 4),
+        quantity: roundQuantity(500 / avaxRejectedEntry, 6),
         leverage: 3,
         source: "manual",
         narrative:
-          "Deliberately over-leveraged AAPL trade intent (3x), submitted while already at the 3-open-position ceiling — shows the Level 1 risk policy engine reject a trade on two rules at once, not just approve everything.",
+          "Deliberately over-leveraged AVAX-USD trade intent (3x), submitted while already at the 3-open-position ceiling — shows the Level 1 risk policy engine reject a trade on two rules at once, not just approve everything.",
       },
     },
     {
@@ -174,14 +183,14 @@ export function buildDemoScenarioPlan(now: Date = new Date()): DemoScenarioActio
     {
       kind: "submit_intent",
       step: {
-        id: "aapl_manual_hold",
-        symbol: "AAPL",
+        id: "avax_manual_hold",
+        symbol: "AVAX-USD",
         side: "buy",
         notionalUsd: 900,
-        quantity: roundQuantity(900 / aaplEntry, 4),
+        quantity: roundQuantity(900 / avaxEntry, 6),
         leverage: 1,
         source: "manual",
-        narrative: "Properly-sized, unleveraged AAPL trade intent submitted once the two closes freed up exposure and a position slot — left open at a small simulated gain.",
+        narrative: "Properly-sized, unleveraged AVAX-USD trade intent submitted once the two closes freed up exposure and a position slot — left open at a small simulated gain.",
       },
     },
   ];
