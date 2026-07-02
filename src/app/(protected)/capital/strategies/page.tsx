@@ -110,7 +110,7 @@ export default async function StrategyLibraryPage() {
     Promise.resolve(getStrategyLibrary()),
     getSelectedStrategyProfile(user.companyId),
   ]);
-  const selectedStrategy = resolveSelectedStrategy(profile);
+  const { selectedStrategy, staleSelectedStrategy } = resolveSelectedStrategy(profile);
 
   return (
     <div className="space-y-6">
@@ -127,7 +127,11 @@ export default async function StrategyLibraryPage() {
       </div>
 
       {/* 2. Current selected strategy */}
-      <div className={`rounded-2xl border p-5 ${selectedStrategy ? "border-emerald-300/30 bg-emerald-300/[0.06]" : "border-white/10 bg-white/5"}`}>
+      <div
+        className={`rounded-2xl border p-5 ${
+          selectedStrategy ? "border-emerald-300/30 bg-emerald-300/[0.06]" : staleSelectedStrategy ? "border-amber-300/30 bg-amber-300/[0.06]" : "border-white/10 bg-white/5"
+        }`}
+      >
         <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Current Strategy</p>
         {selectedStrategy ? (
           <>
@@ -136,6 +140,14 @@ export default async function StrategyLibraryPage() {
               This strategy is active for paper simulation only. Every paper trade intent remains governed by the Risk Constitution and
               must pass the risk policy engine before becoming a paper position.
             </p>
+          </>
+        ) : staleSelectedStrategy ? (
+          <>
+            <h3 className="mt-1 text-xl font-semibold text-white">No strategy selected</h3>
+            <p className="mt-2 max-w-2xl text-sm text-amber-200">
+              Previously selected strategy unavailable. Choose a current paper-only strategy to continue.
+            </p>
+            <p className="mt-1 max-w-2xl text-xs text-slate-500">{staleSelectedStrategy.reason}</p>
           </>
         ) : (
           <p className="mt-2 text-sm text-slate-400">No strategy selected yet. Choose one below to give AOC Capital paper-trading context.</p>

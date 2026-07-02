@@ -1,4 +1,4 @@
-// AOC Capital Strategy Library — governed write path (PR #8).
+// AOC Capital Strategy Library — governed write path.
 //
 // The only place a strategy selection touches the database. Re-validates the
 // strategyKey against the static library server-side (never trusts a
@@ -126,8 +126,47 @@ export async function selectStrategy(input: SelectStrategyInput): Promise<Select
   return { strategy, profile };
 }
 
-/** Convenience lookup used by the GET route — the display copy of a persisted selection, re-derived from the static library rather than trusted from the DB row alone. */
-export function resolveSelectedStrategy(profile: PortfolioStrategyProfileRow | null): StrategyLibraryItem | null {
-  if (!profile) return null;
-  return getStrategyByKey(profile.strategy_key);
+/** A persisted strategy_key that no longer matches any entry in the static library (e.g. removed from STRATEGY_LIBRARY since it was selected). Display/governance context only — never implies execution is enabled or that a trade intent/paper position exists. */
+export type StaleSelectedStrategy = {
+  strategyKey: string;
+  strategyName: string;
+  reason: string;
+};
+
+export type ResolvedStrategySelection = {
+  selectedStrategy: StrategyLibraryItem | null;
+  staleSelectedStrategy: StaleSelectedStrategy | null;
+  paperOnly: true;
+  realExecutionLocked: true;
+};
+
+/**
+ * Convenience lookup used by the GET route and the /capital/strategies page —
+ * the display copy of a persisted selection, re-derived from the static
+ * library rather than trusted from the DB row alone.
+ *
+ * If the persisted strategy_key no longer exists in STRATEGY_LIBRARY (it was
+ * removed since the user selected it), this never crashes and never silently
+ * looks like "no strategy was ever selected" — it surfaces a
+ * staleSelectedStrategy warning instead. It never enables execution and never
+ * creates a trade intent or paper position; realExecutionLocked stays true.
+ */
+export function resolveSelectedStrategy(profile: PortfolioStrategyProfileRow | null): ResolvedStrategySelection {
+  if (!profile) {
+    return { selectedStrategy: null, staleSelectedStrategy: null, paperOnly: true, realExecutionLocked: true };
+  }
+  const strategy = getStrategyByKey(profile.strategy_key);
+  if (strategy) {
+    return { selectedStrategy: strategy, staleSelectedStrategy: null, paperOnly: true, realExecutionLocked: true };
+  }
+  return {
+    selectedStrategy: null,
+    staleSelectedStrategy: {
+      strategyKey: profile.strategy_key,
+      strategyName: profile.strategy_name,
+      reason: "This previously selected strategy is no longer available in the current library.",
+    },
+    paperOnly: true,
+    realExecutionLocked: true,
+  };
 }
