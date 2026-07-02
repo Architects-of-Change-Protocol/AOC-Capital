@@ -3,6 +3,7 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import type { PortfolioRiskState } from "./risk-policy-engine";
 import { getSimulatedPrice, timeBucketStart } from "./mock-price-generator";
 import { computePortfolioSummary, type PortfolioSummary } from "./portfolio-summary";
+import { computeStrategyPerformance, type StrategyPerformance } from "./strategy-performance";
 import type {
   AuditLedgerRow,
   CapitalLevelRow,
@@ -591,6 +592,46 @@ export async function getPortfolioSummary(companyId: string, portfolio?: Portfol
     dailyRealizedPnlUsd,
     weeklyRealizedPnlUsd,
     openPositionsCount: openPositions.length,
+  });
+}
+
+/**
+ * Builds the Strategy Performance Review: reuses the same paper_positions
+ * data and Level 1 risk-limit health as getPortfolioSummary(), then hands the
+ * closed-trade history and current mark-to-market state to
+ * computeStrategyPerformance() (strategy-performance.ts) for win rate,
+ * profit factor, drawdown, and the advisor recommendation. Read-only — like
+ * getPortfolioSummary(), it does not itself refresh open positions to a
+ * fresh simulated price; callers that want a fresh mark should call
+ * markAllOpenPositions() first (see the /api/capital/performance route).
+ * Never unlocks real execution.
+ */
+export async function getStrategyPerformance(companyId: string, portfolio?: PortfolioRow): Promise<StrategyPerformance> {
+  const resolvedPortfolio = portfolio ?? (await getOrCreateDefaultPortfolio(companyId));
+  const positions = await listPaperPositions(companyId);
+
+  const openPositions = positions.filter((p) => p.status === "open");
+  const closedPositions = positions.filter((p) => p.status === "closed" && p.closed_at !== null);
+
+  const unrealizedPnlUsd = openPositions.reduce((sum, p) => sum + p.unrealized_pnl_usd, 0);
+  const openExposureUsd = openPositions.reduce((sum, p) => sum + p.entry_notional_usd, 0);
+
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const dailyRealizedPnlUsd = closedPositions.filter((p) => p.closed_at! >= dayAgo).reduce((sum, p) => sum + p.realized_pnl_usd, 0);
+  const weeklyRealizedPnlUsd = closedPositions.filter((p) => p.closed_at! >= weekAgo).reduce((sum, p) => sum + p.realized_pnl_usd, 0);
+
+  const summary = await getPortfolioSummary(companyId, resolvedPortfolio);
+
+  return computeStrategyPerformance({
+    baseCapitalUsd: resolvedPortfolio.base_capital_usd,
+    closedPositions: closedPositions.map((p) => ({ symbol: p.symbol, realizedPnlUsd: p.realized_pnl_usd, closedAt: p.closed_at! })),
+    openPositionsCount: openPositions.length,
+    unrealizedPnlUsd,
+    openExposureUsd,
+    dailyRealizedPnlUsd,
+    weeklyRealizedPnlUsd,
+    riskHealth: summary.strategyHealth,
   });
 }
 
