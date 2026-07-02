@@ -1,9 +1,12 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/admin";
 import type { PortfolioRiskState } from "./risk-policy-engine";
+import { getSimulatedPrice, timeBucketStart } from "./mock-price-generator";
+import { computePortfolioSummary, type PortfolioSummary } from "./portfolio-summary";
 import type {
   AuditLedgerRow,
   CapitalLevelRow,
+  CloseReason,
   MarketSignalRow,
   PaperPositionRow,
   PortfolioRow,
@@ -12,6 +15,23 @@ import type {
   TradeIntentRow,
   TradeIntentSide,
 } from "./database-contract";
+
+const PAPER_POSITION_COLUMNS =
+  "id,company_id,portfolio_id,trade_intent_id,symbol,side,quantity,entry_price_usd,entry_notional_usd,current_price_usd,current_notional_usd,unrealized_pnl_usd,unrealized_pnl_pct,realized_pnl_usd,status,opened_at,closed_at,close_price_usd,close_reason,last_marked_at,created_at,updated_at";
+
+export class PaperPositionNotFoundError extends Error {
+  constructor(positionId: string) {
+    super(`Paper position ${positionId} not found for this workspace.`);
+    this.name = "PaperPositionNotFoundError";
+  }
+}
+
+export class PaperPositionNotOpenError extends Error {
+  constructor(positionId: string) {
+    super(`Paper position ${positionId} is not open.`);
+    this.name = "PaperPositionNotOpenError";
+  }
+}
 
 const DEFAULT_PORTFOLIO_NAME = "AOC Capital Paper Portfolio";
 const DEFAULT_BASE_CAPITAL_USD = 1000;
@@ -251,24 +271,32 @@ function hashSeed(input: string): number {
   return hash;
 }
 
+/**
+ * Reads the portfolio state the Level 1 risk policy engine needs. dailyPnlUsd
+ * and weeklyPnlUsd are rolling 24h / rolling 7d windows (not UTC calendar
+ * windows) and only ever sum realized_pnl_usd from *closed* positions —
+ * unrealized P&L on still-open positions never feeds loss-limit enforcement.
+ * This mirrors the authoritative SQL copy of these windows in
+ * evaluate_and_record_trade_intent() (20260903000000_aoc_capital_position_lifecycle_mtm.sql).
+ */
 async function getPortfolioRiskState(companyId: string, portfolio: PortfolioRow): Promise<PortfolioRiskState> {
   const supabase = await client();
 
   const { data: openPositions } = await supabase
     .from("paper_positions")
-    .select("id,company_id,portfolio_id,trade_intent_id,symbol,side,quantity,entry_price,status,opened_at,closed_at,realized_pnl_usd")
+    .select(PAPER_POSITION_COLUMNS)
     .eq("company_id", companyId)
     .eq("portfolio_id", portfolio.id)
     .eq("status", "open");
 
-  const currentExposureUsd = ((openPositions ?? []) as PaperPositionRow[]).reduce((sum, p) => sum + p.quantity * p.entry_price, 0);
+  const currentExposureUsd = ((openPositions ?? []) as PaperPositionRow[]).reduce((sum, p) => sum + p.entry_notional_usd, 0);
 
   const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const { data: closedRecent } = await supabase
     .from("paper_positions")
-    .select("id,company_id,portfolio_id,trade_intent_id,symbol,side,quantity,entry_price,status,opened_at,closed_at,realized_pnl_usd")
+    .select(PAPER_POSITION_COLUMNS)
     .eq("company_id", companyId)
     .eq("portfolio_id", portfolio.id)
     .eq("status", "closed")
@@ -363,11 +391,147 @@ export async function listPaperPositions(companyId: string): Promise<PaperPositi
   const supabase = await client();
   const { data } = await supabase
     .from("paper_positions")
-    .select("id,company_id,portfolio_id,trade_intent_id,symbol,side,quantity,entry_price,status,opened_at,closed_at,realized_pnl_usd")
+    .select(PAPER_POSITION_COLUMNS)
     .eq("company_id", companyId)
     .order("opened_at", { ascending: false })
     .limit(50);
   return (data ?? []) as PaperPositionRow[];
+}
+
+/** Fetches a single paper position, scoped to the caller's tenant. */
+export async function getPaperPosition(companyId: string, positionId: string): Promise<PaperPositionRow | null> {
+  const supabase = await client();
+  const { data } = await supabase
+    .from("paper_positions")
+    .select(PAPER_POSITION_COLUMNS)
+    .eq("company_id", companyId)
+    .eq("id", positionId)
+    .maybeSingle();
+  return (data ?? null) as PaperPositionRow | null;
+}
+
+/**
+ * Marks every open paper position in `portfolioId` to a fresh deterministic
+ * simulated price in one transaction (see mark_all_open_paper_positions in
+ * 20260903000000_aoc_capital_position_lifecycle_mtm.sql). No audit event is
+ * written for bulk marks — see markPositionToMarket for the audited,
+ * explicitly user-triggered single-position path.
+ */
+export async function markAllOpenPositions(companyId: string, portfolioId: string): Promise<PaperPositionRow[]> {
+  const supabase = await client();
+  const { data: openPositions } = await supabase
+    .from("paper_positions")
+    .select(PAPER_POSITION_COLUMNS)
+    .eq("company_id", companyId)
+    .eq("portfolio_id", portfolioId)
+    .eq("status", "open");
+
+  const positions = (openPositions ?? []) as PaperPositionRow[];
+  if (positions.length === 0) return [];
+
+  const now = new Date();
+  const marks = await Promise.all(
+    positions.map(async (position) => ({
+      position_id: position.id,
+      current_price_usd: await recordSimulatedPrice(companyId, position.symbol, now),
+    }))
+  );
+
+  const serviceClient = privileged("trading/paper-positions", "mark_all_open_paper_positions", companyId);
+  const { error } = await serviceClient.rpc("mark_all_open_paper_positions", {
+    p_company_id: companyId,
+    p_portfolio_id: portfolioId,
+    p_marks: marks,
+  });
+  if (error) throw new Error(`Unable to mark positions to market: ${error.message}`);
+
+  return listPaperPositions(companyId);
+}
+
+/**
+ * Marks a single open paper position to a fresh deterministic simulated price
+ * (see mark_paper_position in 20260903000000_aoc_capital_position_lifecycle_mtm.sql).
+ * Writes a position_marked_to_market audit event when explicitly triggered
+ * (audit=true), since every refresh of the Paper Positions screen would
+ * otherwise spam the audit ledger.
+ */
+export async function markPositionToMarket(companyId: string, positionId: string, actor: string, actorUserId: string, options: { audit?: boolean } = {}): Promise<PaperPositionRow> {
+  const existing = await getPaperPosition(companyId, positionId);
+  if (!existing) throw new PaperPositionNotFoundError(positionId);
+  if (existing.status !== "open") throw new PaperPositionNotOpenError(positionId);
+
+  const currentPriceUsd = await recordSimulatedPrice(companyId, existing.symbol, new Date());
+
+  const supabase = privileged("trading/paper-positions", "mark_paper_position", companyId, actorUserId);
+  const { data, error } = await supabase.rpc("mark_paper_position", {
+    p_company_id: companyId,
+    p_position_id: positionId,
+    p_current_price_usd: currentPriceUsd,
+    p_actor: actor,
+    p_write_audit: options.audit ?? false,
+  });
+  if (error) throw new Error(`Unable to mark position to market: ${error.message}`);
+  return data as PaperPositionRow;
+}
+
+export type ClosePaperPositionInput = {
+  companyId: string;
+  positionId: string;
+  actor: string;
+  actorUserId: string;
+  closeReason: CloseReason;
+};
+
+/**
+ * Closes an open paper position: gets the simulated close price server-side,
+ * then delegates the atomic close + realized P&L calculation + audit write to
+ * close_paper_position() (20260903000000_aoc_capital_position_lifecycle_mtm.sql).
+ * If the audit insert inside that function fails, the whole transaction rolls
+ * back — the position is never closed without an audit event.
+ */
+export async function closePaperPosition(input: ClosePaperPositionInput): Promise<PaperPositionRow> {
+  const existing = await getPaperPosition(input.companyId, input.positionId);
+  if (!existing) throw new PaperPositionNotFoundError(input.positionId);
+  if (existing.status !== "open") throw new PaperPositionNotOpenError(input.positionId);
+
+  const closePriceUsd = await recordSimulatedPrice(input.companyId, existing.symbol, new Date());
+
+  const supabase = privileged("trading/paper-positions", "close_paper_position", input.companyId, input.actorUserId);
+  const { data, error } = await supabase.rpc("close_paper_position", {
+    p_company_id: input.companyId,
+    p_position_id: input.positionId,
+    p_close_price_usd: closePriceUsd,
+    p_close_reason: input.closeReason,
+    p_actor: input.actor,
+  });
+  if (error) throw new Error(`Unable to close paper position: ${error.message}`);
+  return data as PaperPositionRow;
+}
+
+/** Lists paper positions after refreshing every open one to a fresh simulated price. */
+export async function listPaperPositionsMarked(companyId: string): Promise<PaperPositionRow[]> {
+  const portfolio = await getOrCreateDefaultPortfolio(companyId);
+  await markAllOpenPositions(companyId, portfolio.id);
+  return listPaperPositions(companyId);
+}
+
+/**
+ * Computes the deterministic simulated price for `symbol` and records it in
+ * paper_market_prices (source = 'mock') so marks are auditable. Upserts on
+ * (company_id, symbol, as_of) — repeated calls within the same UTC hour bucket
+ * reuse the same row instead of duplicating it.
+ */
+async function recordSimulatedPrice(companyId: string, symbol: string, at: Date): Promise<number> {
+  const priceUsd = getSimulatedPrice(symbol, at);
+  const asOf = timeBucketStart(at).toISOString();
+
+  const supabase = privileged("trading/paper-market-prices", "record_simulated_price", companyId);
+  const { error } = await supabase
+    .from("paper_market_prices")
+    .upsert({ company_id: companyId, symbol, price_usd: priceUsd, as_of: asOf, source: "mock" }, { onConflict: "company_id,symbol,as_of" });
+  if (error) throw new Error(`Unable to record simulated price: ${error.message}`);
+
+  return priceUsd;
 }
 
 export async function listAuditLedger(companyId: string): Promise<AuditLedgerRow[]> {
@@ -383,12 +547,51 @@ export async function listAuditLedger(companyId: string): Promise<AuditLedgerRow
 
 export async function loadPortfolioOverview(companyId: string) {
   const portfolio = await getOrCreateDefaultPortfolio(companyId);
-  const [state, positions, capitalLevels] = await Promise.all([
+  await markAllOpenPositions(companyId, portfolio.id);
+  const [state, positions, capitalLevels, summary] = await Promise.all([
     getPortfolioRiskState(companyId, portfolio),
     listPaperPositions(companyId),
     ensureCapitalLevels(companyId, portfolio),
+    getPortfolioSummary(companyId, portfolio),
   ]);
-  return { portfolio, state, positions, capitalLevels };
+  return { portfolio, state, positions, capitalLevels, summary };
+}
+
+/**
+ * Builds the Capital Command Center portfolio summary: refreshes open
+ * positions to a fresh simulated price, then aggregates open exposure
+ * (cost basis), unrealized P&L, and realized P&L (all-time + rolling 24h/7d)
+ * into computePortfolioSummary() (portfolio-summary.ts).
+ */
+export async function getPortfolioSummary(companyId: string, portfolio?: PortfolioRow): Promise<PortfolioSummary> {
+  const resolvedPortfolio = portfolio ?? (await getOrCreateDefaultPortfolio(companyId));
+  const positions = await listPaperPositions(companyId);
+
+  const openPositions = positions.filter((p) => p.status === "open");
+  const closedPositions = positions.filter((p) => p.status === "closed");
+
+  const openExposureUsd = openPositions.reduce((sum, p) => sum + p.entry_notional_usd, 0);
+  const unrealizedPnlUsd = openPositions.reduce((sum, p) => sum + p.unrealized_pnl_usd, 0);
+  const realizedPnlUsd = closedPositions.reduce((sum, p) => sum + p.realized_pnl_usd, 0);
+
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const dailyRealizedPnlUsd = closedPositions
+    .filter((p) => p.closed_at && p.closed_at >= dayAgo)
+    .reduce((sum, p) => sum + p.realized_pnl_usd, 0);
+  const weeklyRealizedPnlUsd = closedPositions
+    .filter((p) => p.closed_at && p.closed_at >= weekAgo)
+    .reduce((sum, p) => sum + p.realized_pnl_usd, 0);
+
+  return computePortfolioSummary({
+    baseCapitalUsd: resolvedPortfolio.base_capital_usd,
+    openExposureUsd,
+    unrealizedPnlUsd,
+    realizedPnlUsd,
+    dailyRealizedPnlUsd,
+    weeklyRealizedPnlUsd,
+    openPositionsCount: openPositions.length,
+  });
 }
 
 export { getPortfolioRiskState };

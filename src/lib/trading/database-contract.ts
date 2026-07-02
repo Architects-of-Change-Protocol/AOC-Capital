@@ -68,6 +68,25 @@ export type TradeDecisionRow = {
 
 export type PaperPositionStatus = "open" | "closed";
 
+export type CloseReason =
+  | "user_requested"
+  | "risk_review"
+  | "strategy_exit"
+  | "stop_loss"
+  | "take_profit"
+  | "system_rebalance"
+  | "manual_test";
+
+export const CLOSE_REASONS: CloseReason[] = [
+  "user_requested",
+  "risk_review",
+  "strategy_exit",
+  "stop_loss",
+  "take_profit",
+  "system_rebalance",
+  "manual_test",
+];
+
 export type PaperPositionRow = {
   id: string;
   company_id: string;
@@ -76,11 +95,33 @@ export type PaperPositionRow = {
   symbol: string;
   side: TradeIntentSide;
   quantity: number;
-  entry_price: number;
+  entry_price_usd: number;
+  entry_notional_usd: number;
+  current_price_usd: number;
+  current_notional_usd: number;
+  unrealized_pnl_usd: number;
+  unrealized_pnl_pct: number;
+  realized_pnl_usd: number;
   status: PaperPositionStatus;
   opened_at: string;
   closed_at: string | null;
-  realized_pnl_usd: number;
+  close_price_usd: number | null;
+  close_reason: CloseReason | null;
+  last_marked_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PaperMarketPriceSource = "mock" | "manual" | "future_live";
+
+export type PaperMarketPriceRow = {
+  id: string;
+  company_id: string;
+  symbol: string;
+  price_usd: number;
+  as_of: string;
+  source: PaperMarketPriceSource;
+  created_at: string;
 };
 
 export type RiskConstitutionRuleRow = {
@@ -113,6 +154,7 @@ export type AuditLedgerEventType =
   | "trade_decision_rejected"
   | "position_opened"
   | "position_closed"
+  | "position_marked_to_market"
   | "advisor_strategy_generated"
   | "advisor_constitution_generated";
 

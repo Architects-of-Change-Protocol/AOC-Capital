@@ -1,6 +1,6 @@
 import { requireAuthUser } from "@/lib/auth";
 import { loadPortfolioOverview } from "@/lib/trading/trade-service";
-import { MAX_DAILY_SIMULATED_LOSS_USD, MAX_OPEN_POSITIONS, MAX_SIMULATED_EXPOSURE_RATIO, MAX_WEEKLY_SIMULATED_LOSS_USD } from "@/lib/trading/risk-policy-engine";
+import type { StrategyHealth } from "@/lib/trading/portfolio-summary";
 
 function StatCard({ label, value, sub, warn }: { label: string; value: string; sub?: string; warn?: boolean }) {
   return (
@@ -12,42 +12,59 @@ function StatCard({ label, value, sub, warn }: { label: string; value: string; s
   );
 }
 
+const HEALTH_COPY: Record<StrategyHealth, { label: string; className: string }> = {
+  healthy: { label: "Healthy", className: "border-emerald-300/30 bg-emerald-300/[0.08] text-emerald-200" },
+  caution: { label: "Caution", className: "border-amber-300/30 bg-amber-300/[0.08] text-amber-200" },
+  breached: { label: "Breached", className: "border-rose-300/30 bg-rose-300/[0.08] text-rose-200" },
+};
+
 export default async function PortfolioOverviewPage() {
   const user = await requireAuthUser();
-  const { portfolio, state, positions, capitalLevels } = await loadPortfolioOverview(user.companyId);
+  const { portfolio, positions, capitalLevels, summary } = await loadPortfolioOverview(user.companyId);
 
-  const exposureRatio = state.baseCapitalUsd > 0 ? state.currentExposureUsd / state.baseCapitalUsd : 0;
   const openPositions = positions.filter((p) => p.status === "open");
-
-  let health: "healthy" | "watch" | "breach" = "healthy";
-  if (exposureRatio > MAX_SIMULATED_EXPOSURE_RATIO || state.dailyPnlUsd <= -MAX_DAILY_SIMULATED_LOSS_USD || state.weeklyPnlUsd <= -MAX_WEEKLY_SIMULATED_LOSS_USD) {
-    health = "breach";
-  } else if (exposureRatio > MAX_SIMULATED_EXPOSURE_RATIO * 0.8 || state.openPositionCount >= MAX_OPEN_POSITIONS) {
-    health = "watch";
-  }
-
-  const healthCopy = {
-    healthy: { label: "Healthy", className: "border-emerald-300/30 bg-emerald-300/[0.08] text-emerald-200" },
-    watch: { label: "Watch", className: "border-amber-300/30 bg-amber-300/[0.08] text-amber-200" },
-    breach: { label: "At Limit", className: "border-rose-300/30 bg-rose-300/[0.08] text-rose-200" },
-  }[health];
+  const healthCopy = HEALTH_COPY[summary.strategyHealth];
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs uppercase tracking-[0.2em] text-slate-400">
+        Paper only · Simulation mode · No real money is being traded
+      </div>
+
       <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-5">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Portfolio Brain</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Capital Command Center</p>
           <h2 className="mt-1 text-xl font-semibold text-white">{portfolio.name}</h2>
-          <p className="mt-1 text-sm text-slate-400">Base simulated capital: ${portfolio.base_capital_usd.toFixed(2)}</p>
+          <p className="mt-1 text-sm text-slate-400">Starting simulated capital: ${summary.baseCapitalUsd.toFixed(2)}</p>
         </div>
         <span className={`rounded-full border px-4 py-1.5 text-sm font-medium ${healthCopy.className}`}>Strategy Health: {healthCopy.label}</span>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Simulated Exposure" value={`${(exposureRatio * 100).toFixed(1)}%`} sub={`Limit ${MAX_SIMULATED_EXPOSURE_RATIO * 100}%`} warn={exposureRatio > MAX_SIMULATED_EXPOSURE_RATIO * 0.8} />
-        <StatCard label="Open Paper Positions" value={`${state.openPositionCount}`} sub={`Limit ${MAX_OPEN_POSITIONS}`} warn={state.openPositionCount >= MAX_OPEN_POSITIONS} />
-        <StatCard label="Daily Simulated P&L" value={`$${state.dailyPnlUsd.toFixed(2)}`} sub={`Loss limit -$${MAX_DAILY_SIMULATED_LOSS_USD.toFixed(2)}`} warn={state.dailyPnlUsd <= -MAX_DAILY_SIMULATED_LOSS_USD} />
-        <StatCard label="Weekly Simulated P&L" value={`$${state.weeklyPnlUsd.toFixed(2)}`} sub={`Loss limit -$${MAX_WEEKLY_SIMULATED_LOSS_USD.toFixed(2)}`} warn={state.weeklyPnlUsd <= -MAX_WEEKLY_SIMULATED_LOSS_USD} />
+        <StatCard label="Simulated Equity" value={`$${summary.simulatedEquityUsd.toFixed(2)}`} sub={`Starting capital $${summary.baseCapitalUsd.toFixed(2)}`} />
+        <StatCard label="Simulated Cash" value={`$${summary.simulatedCashUsd.toFixed(2)}`} />
+        <StatCard
+          label="Open Exposure"
+          value={`$${summary.openExposureUsd.toFixed(2)}`}
+          sub={`${summary.openExposurePct.toFixed(1)}% of capital`}
+          warn={summary.openExposurePct >= 48}
+        />
+        <StatCard label="Open Positions" value={`${summary.openPositionsCount}`} sub={`Limit ${summary.maxOpenPositions}`} warn={summary.openPositionsCount >= summary.maxOpenPositions} />
+        <StatCard label="Realized P&L" value={`$${summary.realizedPnlUsd.toFixed(2)}`} sub="All-time, closed positions only" />
+        <StatCard label="Unrealized P&L" value={`$${summary.unrealizedPnlUsd.toFixed(2)}`} sub="Open positions, mark-to-market" />
+        <StatCard label="Total P&L" value={`$${summary.totalPnlUsd.toFixed(2)}`} sub={`${summary.totalPnlPct.toFixed(2)}% of starting capital`} />
+        <StatCard
+          label="Daily Loss Remaining"
+          value={`$${summary.dailyLossRemainingUsd.toFixed(2)}`}
+          sub={`Limit -$${summary.maxDailyLossUsd.toFixed(2)} · rolling 24h, realized only`}
+          warn={summary.dailyLossRemainingUsd <= 0}
+        />
+        <StatCard
+          label="Weekly Loss Remaining"
+          value={`$${summary.weeklyLossRemainingUsd.toFixed(2)}`}
+          sub={`Limit -$${summary.maxWeeklyLossUsd.toFixed(2)} · rolling 7d, realized only`}
+          warn={summary.weeklyLossRemainingUsd <= 0}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -58,7 +75,10 @@ export default async function PortfolioOverviewPage() {
             {openPositions.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-black/10 px-3 py-2 text-sm">
                 <span className="text-white">{p.symbol}</span>
-                <span className="text-slate-400">{p.side} · {p.quantity} @ ${p.entry_price.toFixed(2)}</span>
+                <span className="text-slate-400">
+                  {p.side} · {p.quantity} @ ${p.entry_price_usd.toFixed(2)}
+                </span>
+                <span className={p.unrealized_pnl_usd >= 0 ? "text-emerald-300" : "text-rose-300"}>${p.unrealized_pnl_usd.toFixed(2)}</span>
               </div>
             ))}
           </div>
