@@ -175,6 +175,7 @@ export interface CommandCenterLink {
 }
 
 export const DISCOVERABILITY_LINKS: CommandCenterLink[] = [
+  { href: "/capital/overview", label: "Portfolio Overview", description: "Read-only dashboard: strategy, signals, drafts, decisions, positions, and recent activity in one place." },
   { href: "/capital/advisor", label: "Advisor", description: "Guided intake, strategy brief, and risk profile." },
   { href: "/capital/strategies", label: "Strategy Library", description: "Paper-only strategy profiles to simulate, govern, and review." },
   { href: "/capital/signals", label: "Signal Engine", description: "Deterministic, paper-only strategy signal recommendations — never an order, never a trade." },
