@@ -1,6 +1,7 @@
 import { requireAuthUser } from "@/lib/auth";
 import { listTradeDecisions, listTradeIntents } from "@/lib/trading/trade-service";
 import { CreateTradeIntentForm } from "./create-trade-intent-form";
+import { SubmitDraftForReviewButton } from "./submit-draft-for-review-button";
 
 const STATUS_STYLE: Record<string, string> = {
   draft: "border-cyan-200/30 bg-cyan-300/[0.08] text-cyan-100",
@@ -35,9 +36,12 @@ export default async function TradeIntentsPage() {
                   <span className={`rounded-full border px-3 py-1 text-xs ${STATUS_STYLE[intent.status]}`}>{intent.status}</span>
                 </div>
                 {intent.status === "draft" ? (
-                  <p className="mt-2 text-xs text-slate-500">
-                    Draft from a signal recommendation. Not yet submitted for Risk Constitution review — no paper position exists for this draft.
-                  </p>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <p className="text-xs text-slate-500">
+                      Draft from a signal recommendation. Not yet submitted for Risk Constitution review — no paper position exists for this draft.
+                    </p>
+                    <SubmitDraftForReviewButton intentId={intent.id} />
+                  </div>
                 ) : null}
                 {decision ? (
                   <ul className="mt-2 space-y-1 text-xs text-slate-500">

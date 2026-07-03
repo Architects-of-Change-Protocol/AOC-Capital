@@ -168,7 +168,8 @@ export type AuditLedgerEventType =
   | "demo_scenario_reset"
   | "strategy_selected"
   | "signals_generated"
-  | "signal_converted_to_draft_trade_intent";
+  | "signal_converted_to_draft_trade_intent"
+  | "trade_intent_submitted_for_review";
 
 export type AuditLedgerRow = {
   id: string;
