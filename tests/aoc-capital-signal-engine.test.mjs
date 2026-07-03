@@ -505,3 +505,161 @@ test("Crypto Majors Rotation respects the max open positions headroom and never 
   for (const signal of signals) assert.notEqual(signal.action, "paper_buy_candidate");
   assert.equal(signals.length, 4);
 });
+
+// ─── Follow-up fix: performanceContext.recommendation === "review_required" ──
+// must downgrade/block would-be paper_buy_candidates, not just riskHealth
+// "breach" / recommendation "pause". Covers the common case of a fresh
+// portfolio (0 closed positions -> not_ready_for_real_execution ->
+// review_required) that would otherwise get a full-strength buy candidate
+// despite having no track record yet.
+
+const REVIEW_REQUIRED_NOTE = "Performance review requires more paper evidence before new paper buy candidates are recommended.";
+const FRESH_PORTFOLIO_REVIEW_REQUIRED_CONTEXT = {
+  totalReturnPct: 0,
+  profitFactor: null,
+  maxDrawdownPct: 0,
+  currentDrawdownPct: 0,
+  riskHealth: "healthy",
+  recommendation: "review_required",
+};
+
+test("1. review_required downgrades a would-be paper_buy_candidate to watch, with status staying active (not blocked_by_risk)", () => {
+  const input = baseInput({ performanceContext: FRESH_PORTFOLIO_REVIEW_REQUIRED_CONTEXT });
+  const signals = generatePaperSignals(input);
+  const btc = signals.find((s) => s.symbol === "BTC-USD");
+  assert.equal(btc.action, "watch");
+  assert.equal(btc.status, "active");
+  assert.equal(btc.suggestedNotionalUsd, null);
+});
+
+test("2. a fresh portfolio (0 closed positions, healthy risk, review_required) never produces a paper_buy_candidate, on any buy-capable strategy", () => {
+  const buyCapableStrategies = [
+    ["conservative_crypto_trend", "Conservative Crypto Trend", "conservative", ["BTC-USD", "ETH-USD"]],
+    ["btc_eth_momentum", "BTC/ETH Momentum", "balanced", ["BTC-USD", "ETH-USD"]],
+    ["crypto_majors_rotation", "Crypto Majors Rotation", "growth", ["BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD"]],
+  ];
+  for (const [key, name, riskProfile, symbols] of buyCapableStrategies) {
+    const input = withStrategy(baseInput({ performanceContext: FRESH_PORTFOLIO_REVIEW_REQUIRED_CONTEXT }), key, name, riskProfile, symbols);
+    for (const signal of generatePaperSignals(input)) {
+      assert.notEqual(signal.action, "paper_buy_candidate", `${key} should not propose a buy candidate for a fresh, review_required portfolio`);
+    }
+  }
+});
+
+test("3. not_ready_for_real_execution (mapped to review_required by signal-engine-service.ts) prevents buy candidates at the pure-engine level", () => {
+  // The pure engine only ever sees the already-mapped "review_required" value
+  // (see ADVISOR_RECOMMENDATION_TO_SIGNAL_RECOMMENDATION in
+  // signal-engine-service.ts, exercised by a static test in
+  // aoc-capital-signal-engine-safety.test.mjs) — this asserts the engine-side
+  // half of that guarantee: once mapped, it blocks a buy candidate.
+  const input = withStrategy(
+    baseInput({ performanceContext: FRESH_PORTFOLIO_REVIEW_REQUIRED_CONTEXT }),
+    "btc_eth_momentum",
+    "BTC/ETH Momentum",
+    "balanced",
+    ["BTC-USD", "ETH-USD"]
+  );
+  for (const signal of generatePaperSignals(input)) assert.notEqual(signal.action, "paper_buy_candidate");
+});
+
+test("4. momentum and rotation never classify a review_required-downgraded signal as strong", () => {
+  const strategies = [
+    ["btc_eth_momentum", "BTC/ETH Momentum", "balanced", ["BTC-USD", "ETH-USD"]],
+    ["crypto_majors_rotation", "Crypto Majors Rotation", "growth", ["BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD"]],
+  ];
+  // Even with performance metrics that would otherwise read as excellent
+  // (positive return, high profit factor, low drawdown), review_required
+  // must still prevent a "strong" buy-context classification.
+  const optimisticButReviewRequired = { totalReturnPct: 8, profitFactor: 3, maxDrawdownPct: 1, currentDrawdownPct: 0, riskHealth: "healthy", recommendation: "review_required" };
+  for (const [key, name, riskProfile, symbols] of strategies) {
+    const input = withStrategy(baseInput({ performanceContext: optimisticButReviewRequired }), key, name, riskProfile, symbols);
+    for (const signal of generatePaperSignals(input)) {
+      assert.notEqual(signal.action, "paper_buy_candidate");
+      assert.notEqual(signal.strength, "strong");
+    }
+  }
+});
+
+test("5. Conservative Crypto Trend also avoids a paper_buy_candidate under review_required, even with ample exposure headroom", () => {
+  const input = baseInput({ performanceContext: FRESH_PORTFOLIO_REVIEW_REQUIRED_CONTEXT });
+  const signals = generatePaperSignals(input);
+  for (const signal of signals) assert.notEqual(signal.action, "paper_buy_candidate");
+});
+
+test("6. review_required does not change Risk-Off Cash Mode's already-defensive behavior", () => {
+  const input = withStrategy(
+    baseInput({ performanceContext: FRESH_PORTFOLIO_REVIEW_REQUIRED_CONTEXT }),
+    "risk_off_cash_mode",
+    "Risk-Off Cash Mode",
+    "defensive",
+    ["BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD"]
+  );
+  const signals = generatePaperSignals(input);
+  for (const signal of signals) {
+    assert.notEqual(signal.action, "paper_buy_candidate");
+    assert.equal(signal.suggestedNotionalUsd, null);
+  }
+});
+
+test("7. pause still blocks a paper_buy_candidate via blocked_by_risk (Conservative Crypto Trend's own eligibility pre-check does not already intercept 'pause', so this exercises the hard risk gate) — unaffected by the review_required downgrade path", () => {
+  // Note: btc_eth_momentum's own strategy-level pre-check already treats
+  // "pause" as ineligible before ever reaching the hard risk gate (see
+  // evaluateBtcEthMomentum's performanceBreachOrPause check), so it would
+  // never surface as blocked_by_risk there — this uses
+  // conservative_crypto_trend (baseInput()'s default strategy), whose
+  // pre-check only looks at riskHealth, not recommendation, so a "pause"
+  // recommendation with a healthy riskHealth reaches
+  // checkRiskGateForBuyCandidate and is caught there instead.
+  const input = baseInput({
+    performanceContext: { totalReturnPct: 1, profitFactor: 1, maxDrawdownPct: 10, currentDrawdownPct: 8, riskHealth: "healthy", recommendation: "pause" },
+  });
+  const signals = generatePaperSignals(input);
+  for (const signal of signals) assert.notEqual(signal.action, "paper_buy_candidate");
+  const blocked = signals.find((s) => s.status === "blocked_by_risk");
+  assert.ok(blocked, "expected pause to still produce a blocked_by_risk demonstration via the hard risk gate");
+  assert.match(blocked.blockedReasons.join(" "), /recommends pausing/i);
+});
+
+test("8. breach still prevents a paper_buy_candidate on every buy-capable strategy — unaffected by the review_required downgrade path", () => {
+  // Every current buy-capable strategy's own eligibility pre-check already
+  // treats riskHealth "breach" as ineligible (performanceCautionOrWorse /
+  // performanceBreachOrPause), so a breach never reaches
+  // checkRiskGateForBuyCandidate to be relabeled blocked_by_risk — it
+  // resolves to "watch" via the strategy's own fallback instead. Either way,
+  // no paper_buy_candidate is ever produced, which is what this test pins
+  // down for all three buy-capable strategies.
+  const breachContext = { totalReturnPct: -10, profitFactor: 0.5, maxDrawdownPct: 40, currentDrawdownPct: 35, riskHealth: "breach", recommendation: "pause" };
+  const buyCapableStrategies = [
+    ["conservative_crypto_trend", "Conservative Crypto Trend", "conservative", ["BTC-USD", "ETH-USD"]],
+    ["btc_eth_momentum", "BTC/ETH Momentum", "balanced", ["BTC-USD", "ETH-USD"]],
+    ["crypto_majors_rotation", "Crypto Majors Rotation", "growth", ["BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD"]],
+  ];
+  for (const [key, name, riskProfile, symbols] of buyCapableStrategies) {
+    const input = withStrategy(baseInput({ performanceContext: breachContext }), key, name, riskProfile, symbols);
+    for (const signal of generatePaperSignals(input)) {
+      assert.notEqual(signal.action, "paper_buy_candidate", `${key} should not propose a buy candidate under a performance breach`);
+    }
+  }
+});
+
+test("review_required downgrade is explainable: the exact reviewer-facing note appears in both rationale and riskNotes", () => {
+  const input = baseInput({ performanceContext: FRESH_PORTFOLIO_REVIEW_REQUIRED_CONTEXT });
+  const btc = generatePaperSignals(input).find((s) => s.symbol === "BTC-USD");
+  assert.ok(btc.rationale.includes(REVIEW_REQUIRED_NOTE), "expected the review_required note verbatim in rationale");
+  assert.ok(btc.riskNotes.includes(REVIEW_REQUIRED_NOTE), "expected the review_required note verbatim in riskNotes");
+});
+
+test("review_required downgrade never appears in blockedReasons — it is a softer, non-governance-violation downgrade", () => {
+  const input = baseInput({ performanceContext: FRESH_PORTFOLIO_REVIEW_REQUIRED_CONTEXT });
+  const btc = generatePaperSignals(input).find((s) => s.symbol === "BTC-USD");
+  assert.deepEqual(btc.blockedReasons, []);
+});
+
+test("review_required still respects paperOnly/realExecutionLocked and passes assertSignalIsPaperOnly", () => {
+  const input = baseInput({ performanceContext: FRESH_PORTFOLIO_REVIEW_REQUIRED_CONTEXT });
+  for (const signal of generatePaperSignals(input)) {
+    assert.equal(signal.paperOnly, true);
+    assert.equal(signal.realExecutionLocked, true);
+    assert.doesNotThrow(() => assertSignalIsPaperOnly(signal));
+  }
+});

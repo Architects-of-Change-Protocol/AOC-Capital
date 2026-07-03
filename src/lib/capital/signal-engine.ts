@@ -24,6 +24,17 @@ import { SIGNAL_ACTIONS, SIGNAL_STATUSES, SIGNAL_STRENGTHS } from "./signal-engi
 /** Below this, a paper buy candidate is not worth surfacing as an actionable size — see the minimum-threshold rule in the PR spec. */
 const MIN_MEANINGFUL_NOTIONAL_USD = 25;
 
+/**
+ * Shown (as both rationale and a risk note) whenever a would-be
+ * paper_buy_candidate is downgraded because the Strategy Performance Review
+ * recommends "review_required" — e.g. a fresh portfolio with too few closed
+ * paper trades to judge, or a strategy the advisor flagged for review. This
+ * is a softer, evidentiary downgrade (status stays "active", action becomes
+ * "watch") — distinct from the hard Risk Constitution gate below, which uses
+ * status "blocked_by_risk" for actual limit violations (breach/pause).
+ */
+const REVIEW_REQUIRED_DOWNGRADE_NOTE = "Performance review requires more paper evidence before new paper buy candidates are recommended.";
+
 const REQUIRED_USER_ACTION_BY_ACTION: Record<SignalAction, string> = {
   paper_buy_candidate: "Review only. Consider creating a separate paper trade intent manually if you choose to act on this signal.",
   watch: "Continue observing.",
@@ -497,11 +508,13 @@ function evaluateSymbolsForStrategy(input: SignalEngineInput, snapshot: RiskSnap
  * Generates deterministic, transparent, paper-only signal recommendations —
  * one per selected-strategy supported symbol. Never creates a trade intent,
  * never opens a paper position, never suggests leverage or a short. Every
- * paper_buy_candidate a strategy evaluator proposes is sized by
- * calculateSuggestedNotionalUsd() and then must clear
- * checkRiskGateForBuyCandidate(); a candidate that fails is downgraded to
- * avoid/status blocked_by_risk with the full list of blocking reasons —
- * never silently dropped.
+ * paper_buy_candidate a strategy evaluator proposes must first clear the
+ * Strategy Performance Review's "review_required" check (downgraded to
+ * watch, status stays "active" — see REVIEW_REQUIRED_DOWNGRADE_NOTE), then
+ * is sized by calculateSuggestedNotionalUsd() and must clear
+ * checkRiskGateForBuyCandidate(); a candidate that fails the hard gate is
+ * downgraded to avoid/status blocked_by_risk with the full list of blocking
+ * reasons — never silently dropped.
  */
 export function generatePaperSignals(input: SignalEngineInput): PaperSignalRecommendation[] {
   const strategy = input.selectedStrategy;
@@ -518,20 +531,36 @@ export function generatePaperSignals(input: SignalEngineInput): PaperSignalRecom
     const rationale = [...evaluation.rationale];
 
     if (evaluation.wantsBuyCandidate) {
-      const candidateNotional = calculateSuggestedNotionalUsd(strategy.key, input);
-      if (candidateNotional === null) {
+      if (input.performanceContext?.recommendation === "review_required") {
+        // A hard risk breach isn't in play here — this is an evidentiary
+        // "not enough of a track record yet" downgrade, so it stays status
+        // "active" with action "watch" rather than
+        // "blocked_by_risk" (reserved for actual Risk Constitution
+        // violations below). Covers advisorRecommendation values
+        // reduce_risk/review_required/not_ready_for_real_execution, all
+        // mapped to "review_required" by signal-engine-service.ts — in
+        // particular a fresh portfolio with 0 closed positions, which must
+        // not jump straight to a full-strength paper_buy_candidate just
+        // because no hard limit is breached yet.
         action = "watch";
-        rationale.push("Available exposure is too small for a meaningful paper recommendation.");
-        riskNotesExtra.push("Available exposure is too small for a meaningful paper recommendation.");
+        rationale.push(REVIEW_REQUIRED_DOWNGRADE_NOTE);
+        riskNotesExtra.push(REVIEW_REQUIRED_DOWNGRADE_NOTE);
       } else {
-        const gateReasons = checkRiskGateForBuyCandidate(input, candidateNotional, snapshot);
-        if (gateReasons.length > 0) {
-          action = "avoid";
-          status = "blocked_by_risk";
-          blockedReasons.push(...gateReasons);
+        const candidateNotional = calculateSuggestedNotionalUsd(strategy.key, input);
+        if (candidateNotional === null) {
+          action = "watch";
+          rationale.push("Available exposure is too small for a meaningful paper recommendation.");
+          riskNotesExtra.push("Available exposure is too small for a meaningful paper recommendation.");
         } else {
-          action = "paper_buy_candidate";
-          suggestedNotionalUsd = candidateNotional;
+          const gateReasons = checkRiskGateForBuyCandidate(input, candidateNotional, snapshot);
+          if (gateReasons.length > 0) {
+            action = "avoid";
+            status = "blocked_by_risk";
+            blockedReasons.push(...gateReasons);
+          } else {
+            action = "paper_buy_candidate";
+            suggestedNotionalUsd = candidateNotional;
+          }
         }
       }
     }

@@ -146,3 +146,26 @@ test("the generate button POSTs with no request body — nothing for it to submi
   const fetchCall = buttonTs.slice(buttonTs.indexOf("fetch(\"/api/capital/signals/generate\""), buttonTs.indexOf("fetch(\"/api/capital/signals/generate\"") + 200);
   assert.doesNotMatch(fetchCall, /body:/);
 });
+
+// ─── Performance Review mapping: review_required must reach the pure engine ─
+// The pure engine (signal-engine.ts) only understands the already-mapped
+// SignalEngineInput.performanceContext.recommendation value. This pins down
+// that the service-layer mapping actually routes every non-"continue"/
+// non-"pause" AdvisorRecommendationAction — in particular
+// not_ready_for_real_execution, the common fresh-portfolio case — into
+// "review_required", so the engine's review_required downgrade
+// (tests/aoc-capital-signal-engine.test.mjs) actually gets exercised in
+// production rather than only in a hand-built test fixture.
+
+test("ADVISOR_RECOMMENDATION_TO_SIGNAL_RECOMMENDATION maps reduce_risk/review_required/not_ready_for_real_execution to review_required, and pause to pause", () => {
+  const mappingBlock = extractFunction(serviceTs, "const ADVISOR_RECOMMENDATION_TO_SIGNAL_RECOMMENDATION");
+  assert.match(mappingBlock, /reduce_risk:\s*"review_required"/);
+  assert.match(mappingBlock, /review_required:\s*"review_required"/);
+  assert.match(mappingBlock, /not_ready_for_real_execution:\s*"review_required"/);
+  assert.match(mappingBlock, /pause:\s*"pause"/);
+});
+
+test("mapPerformanceContext always derives recommendation via ADVISOR_RECOMMENDATION_TO_SIGNAL_RECOMMENDATION — never hardcodes continue_paper_monitoring regardless of input", () => {
+  const mapBody = extractFunction(serviceTs, "function mapPerformanceContext");
+  assert.match(mapBody, /ADVISOR_RECOMMENDATION_TO_SIGNAL_RECOMMENDATION\[performance\.advisorRecommendation\]/);
+});
