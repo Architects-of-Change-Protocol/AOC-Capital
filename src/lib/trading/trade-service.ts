@@ -26,7 +26,7 @@ import type {
 } from "./database-contract";
 
 const PAPER_POSITION_COLUMNS =
-  "id,company_id,portfolio_id,trade_intent_id,symbol,side,quantity,entry_price_usd,entry_notional_usd,current_price_usd,current_notional_usd,unrealized_pnl_usd,unrealized_pnl_pct,realized_pnl_usd,status,opened_at,closed_at,close_price_usd,close_reason,last_marked_at,created_at,updated_at";
+  "id,company_id,portfolio_id,trade_intent_id,symbol,side,quantity,entry_price_usd,entry_notional_usd,current_price_usd,current_notional_usd,unrealized_pnl_usd,unrealized_pnl_pct,realized_pnl_usd,realized_pnl_pct,status,opened_at,closed_at,closed_by,close_price_usd,close_notional_usd,close_reason,close_review_id,last_marked_at,created_at,updated_at";
 
 export class PaperPositionNotFoundError extends Error {
   constructor(positionId: string) {

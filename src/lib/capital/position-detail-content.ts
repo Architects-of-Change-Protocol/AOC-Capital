@@ -29,6 +29,7 @@ export const MISSING_UPSTREAM_RECORD = "Missing upstream record.";
 export const SECTION_TITLES = {
   positionHeader: "Position Header",
   currentSnapshot: "Current Position Snapshot",
+  closeReview: "Governed Paper Close Review",
   sourceChain: "Source Chain",
   riskConstitutionDecision: "Risk Constitution Decision",
   lifecycleTimeline: "Lifecycle Timeline",
@@ -38,6 +39,40 @@ export const SECTION_TITLES = {
   governanceSafety: "Governance & Safety",
   relatedLinks: "Related Links",
 } as const;
+
+// ─── Governed Paper Close Review (PR #17) ─────────────────────────────────────
+
+export const CLOSE_REVIEW_CTA_LABEL = "Request Paper Close Review";
+
+export const CLOSE_REVIEW_HELP_TEXT =
+  "This submits the open simulated paper position for governed close review. If approved, AOC Capital will close the paper position using the latest stored paper valuation. No real order will be placed.";
+
+export const CLOSE_REVIEW_CONFIRM_TITLE = "Request paper close review?";
+
+export const CLOSE_REVIEW_CONFIRM_BODY_1 = "This will submit the open simulated paper position for governed close review.";
+
+export const CLOSE_REVIEW_CONFIRM_BODY_2 =
+  "If the review passes, AOC Capital will close the paper position using the latest stored paper valuation and record realized simulated P&L.";
+
+export const CLOSE_REVIEW_CONFIRM_WILL_NOT_LABEL = "This will not:";
+
+export const CLOSE_REVIEW_CONFIRM_WILL_NOT_ITEMS = [
+  "place a real order",
+  "connect to a broker",
+  "route a live trade",
+  "withdraw or deposit funds",
+  "enable real execution",
+] as const;
+
+export const CLOSE_REVIEW_CONFIRM_BUTTON = "Confirm Paper Close";
+
+export const CLOSE_REVIEW_KEEP_OPEN_BUTTON = "Keep Position Open";
+
+export const CLOSE_REVIEW_SUCCESS_NOTE = "Paper position closed through governed paper close review. Real execution remained locked.";
+
+export const CLOSE_REVIEW_CLOSED_NOTE = "This paper position is closed. It remains a historical simulated record and cannot be closed again.";
+
+export const CLOSE_REVIEW_MISSING_VALUATION_NOTE = "Stored valuation is required before paper close review.";
 
 export const NAV_LINKS = {
   positions: "/capital/positions",

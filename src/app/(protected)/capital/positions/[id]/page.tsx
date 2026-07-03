@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { requireAuthUser } from "@/lib/auth";
 import { getPositionDetail, PositionDetailNotFoundError } from "@/lib/capital/position-detail-service";
 import {
+  CLOSE_REVIEW_CLOSED_NOTE,
+  CLOSE_REVIEW_MISSING_VALUATION_NOTE,
   DECISION_APPROVED_NOTE,
   DECISION_MISSING_NOTE,
   EMPTY_NOT_AVAILABLE,
@@ -17,6 +19,7 @@ import {
   POSITION_HEADER_NOTE,
   SECTION_TITLES,
 } from "@/lib/capital/position-detail-content";
+import { RequestPaperCloseReviewButton } from "./request-paper-close-review-button";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -84,6 +87,7 @@ const TIMELINE_KIND_LABEL: Record<string, string> = {
   risk_decision: "Risk Decision",
   position_opened: "Position Opened",
   marked_to_market: "Marked To Market",
+  close_review_approved: "Close Review Approved",
   position_closed: "Position Closed",
   audit_event: "Audit Event",
 };
@@ -100,7 +104,7 @@ export default async function PositionDetailPage({ params }: Props) {
     throw error;
   }
 
-  const { position, pnl, sourceChain, timeline, auditTrail, traceability, governance, relatedLinks } = detail;
+  const { position, pnl, closeReviewEligibility, sourceChain, timeline, auditTrail, traceability, governance, relatedLinks } = detail;
   const traceabilityCopy = TRACEABILITY_STATUS_COPY[traceability.status];
 
   return (
@@ -156,6 +160,22 @@ export default async function PositionDetailPage({ params }: Props) {
           </Link>
         </div>
       </div>
+
+      {/* Governed Paper Close Review */}
+      <SectionCard title={SECTION_TITLES.closeReview}>
+        {position.status === "closed" ? (
+          <p className="text-sm text-slate-400">{CLOSE_REVIEW_CLOSED_NOTE}</p>
+        ) : closeReviewEligibility.eligible ? (
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <p className="max-w-md text-sm text-slate-400">
+              Submit this open simulated paper position for governed close review. Real execution remains locked.
+            </p>
+            <RequestPaperCloseReviewButton positionId={position.id} />
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">{CLOSE_REVIEW_MISSING_VALUATION_NOTE}</p>
+        )}
+      </SectionCard>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -222,6 +242,7 @@ export default async function PositionDetailPage({ params }: Props) {
               <StatCard label="Unrealized P&L" value={fmtUsd(pnl.unrealizedPnlUsd)} valueClassName={pnlClassName(pnl.unrealizedPnlUsd)} />
               <StatCard label="Unrealized P&L %" value={fmtPct(pnl.unrealizedPnlPct)} valueClassName={pnlClassName(pnl.unrealizedPnlUsd)} />
               {pnl.realizedPnlUsd !== null ? <StatCard label="Realized P&L" value={fmtUsd(pnl.realizedPnlUsd)} valueClassName={pnlClassName(pnl.realizedPnlUsd)} /> : null}
+              {position.realizedPnlPct !== null ? <StatCard label="Realized P&L %" value={fmtPct(position.realizedPnlPct)} valueClassName={pnlClassName(pnl.realizedPnlUsd)} /> : null}
               {pnl.totalPnlUsd !== null ? <StatCard label="Total Simulated P&L" value={fmtUsd(pnl.totalPnlUsd)} valueClassName={pnlClassName(pnl.totalPnlUsd)} /> : null}
             </div>
           </SectionCard>
