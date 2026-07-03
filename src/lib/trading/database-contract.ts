@@ -162,7 +162,8 @@ export type AuditLedgerEventType =
   | "advisor_constitution_generated"
   | "demo_scenario_loaded"
   | "demo_scenario_reset"
-  | "strategy_selected";
+  | "strategy_selected"
+  | "signals_generated";
 
 export type AuditLedgerRow = {
   id: string;
@@ -190,4 +191,29 @@ export type PortfolioStrategyProfileRow = {
   selected_by: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** A persisted paper signal recommendation from the Signal Engine — see 20260907000000_aoc_capital_signal_engine.sql and src/lib/capital/signal-engine.ts. A recommendation only; never a trade intent or paper position. */
+export type PaperSignalRecommendationRow = {
+  id: string;
+  company_id: string;
+  portfolio_id: string;
+  strategy_key: string;
+  strategy_name: string;
+  symbol: string;
+  action: string;
+  strength: string;
+  confidence_score: number;
+  suggested_notional_usd: number | null;
+  market_price_usd: number | null;
+  market_data_source: string;
+  rationale: string[];
+  risk_notes: string[];
+  blocked_reasons: string[];
+  required_user_action: string;
+  paper_only: true;
+  real_execution_locked: true;
+  status: string;
+  generated_at: string;
+  created_at: string;
 };
