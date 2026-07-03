@@ -3,6 +3,7 @@ import { listTradeDecisions, listTradeIntents } from "@/lib/trading/trade-servic
 import { CreateTradeIntentForm } from "./create-trade-intent-form";
 
 const STATUS_STYLE: Record<string, string> = {
+  draft: "border-cyan-200/30 bg-cyan-300/[0.08] text-cyan-100",
   pending: "border-amber-300/30 bg-amber-300/[0.08] text-amber-200",
   approved: "border-emerald-300/30 bg-emerald-300/[0.08] text-emerald-200",
   rejected: "border-rose-300/30 bg-rose-300/[0.08] text-rose-200",
@@ -33,6 +34,11 @@ export default async function TradeIntentsPage() {
                   </div>
                   <span className={`rounded-full border px-3 py-1 text-xs ${STATUS_STYLE[intent.status]}`}>{intent.status}</span>
                 </div>
+                {intent.status === "draft" ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Draft from a signal recommendation. Not yet submitted for Risk Constitution review — no paper position exists for this draft.
+                  </p>
+                ) : null}
                 {decision ? (
                   <ul className="mt-2 space-y-1 text-xs text-slate-500">
                     {decision.reasons.map((reason) => (

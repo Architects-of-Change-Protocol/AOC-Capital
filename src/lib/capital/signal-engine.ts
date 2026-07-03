@@ -36,7 +36,7 @@ const MIN_MEANINGFUL_NOTIONAL_USD = 25;
 const REVIEW_REQUIRED_DOWNGRADE_NOTE = "Performance review requires more paper evidence before new paper buy candidates are recommended.";
 
 const REQUIRED_USER_ACTION_BY_ACTION: Record<SignalAction, string> = {
-  paper_buy_candidate: "Review only. Consider creating a separate paper trade intent manually if you choose to act on this signal.",
+  paper_buy_candidate: "Review only. Convert to a draft trade intent if you choose to act on this signal — this creates a draft only; it does not submit for Risk Constitution review and does not open a paper position.",
   watch: "Continue observing.",
   reduce_exposure: "Reduce simulated exposure manually if appropriate.",
   avoid: "No action recommended.",
