@@ -1,7 +1,16 @@
+import Link from "next/link";
 import { requireAuthUser } from "@/lib/auth";
 import { listPaperPositionsMarked } from "@/lib/trading/trade-service";
 import { computePnlPct } from "@/lib/trading/mark-to-market";
 import { MarkAllButton, PositionActions } from "./paper-position-actions";
+
+function ViewDetailLink({ positionId }: { positionId: string }) {
+  return (
+    <Link href={`/capital/positions/${positionId}`} className="text-xs text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
+      View Detail →
+    </Link>
+  );
+}
 
 function pnlClassName(value: number): string {
   if (value > 0) return "text-emerald-300";
@@ -44,7 +53,10 @@ export default async function PaperPositionsPage() {
                   </span>
                   <span className="rounded-full border border-emerald-300/30 bg-emerald-300/[0.08] px-3 py-1 text-xs text-emerald-200">open</span>
                 </div>
-                <PositionActions positionId={p.id} />
+                <div className="flex items-center gap-3">
+                  <ViewDetailLink positionId={p.id} />
+                  <PositionActions positionId={p.id} />
+                </div>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400 sm:grid-cols-4">
                 <span>Entry notional: ${p.entry_notional_usd.toFixed(2)}</span>
@@ -75,9 +87,12 @@ export default async function PaperPositionsPage() {
                   </span>
                   <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">closed</span>
                 </div>
-                <span className={`font-medium ${pnlClassName(p.realized_pnl_usd)}`}>
-                  Realized P&L: ${p.realized_pnl_usd.toFixed(2)} ({computePnlPct(p.realized_pnl_usd, p.entry_notional_usd).toFixed(2)}%)
-                </span>
+                <div className="flex items-center gap-3">
+                  <ViewDetailLink positionId={p.id} />
+                  <span className={`font-medium ${pnlClassName(p.realized_pnl_usd)}`}>
+                    Realized P&L: ${p.realized_pnl_usd.toFixed(2)} ({computePnlPct(p.realized_pnl_usd, p.entry_notional_usd).toFixed(2)}%)
+                  </span>
+                </div>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400 sm:grid-cols-4">
                 <span>Close price: ${p.close_price_usd !== null ? p.close_price_usd.toFixed(2) : "—"}</span>
