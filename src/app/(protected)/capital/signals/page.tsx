@@ -19,6 +19,7 @@ import {
   STALE_STRATEGY_TITLE,
 } from "@/lib/capital/signal-engine-content";
 import { GenerateSignalsButton } from "./generate-signals-button";
+import { ConvertSignalToDraftButton } from "./convert-signal-to-draft-button";
 
 const ACTION_COPY: Record<string, { label: string; className: string }> = {
   paper_buy_candidate: { label: "Paper Buy Candidate", className: "border-emerald-300/30 bg-emerald-300/[0.08] text-emerald-200" },
@@ -43,6 +44,19 @@ const STRENGTH_COPY: Record<string, { label: string; className: string }> = {
 
 function fallbackCopy(value: string) {
   return { label: value.replace(/_/g, " "), className: "border-white/10 bg-white/5 text-slate-300" };
+}
+
+/** Mirrors the eligibility rule enforced server-side in signal-trade-intent-handoff-service.ts — display-only; the API route re-validates before writing anything. */
+function isConvertibleToDraft(signal: PaperSignalRecommendationRow): boolean {
+  return (
+    signal.action === "paper_buy_candidate" &&
+    signal.status === "active" &&
+    !signal.converted_trade_intent_id &&
+    signal.suggested_notional_usd !== null &&
+    signal.suggested_notional_usd > 0 &&
+    signal.market_price_usd !== null &&
+    signal.market_price_usd > 0
+  );
 }
 
 function SignalCard({ signal }: { signal: PaperSignalRecommendationRow }) {
@@ -127,6 +141,23 @@ function SignalCard({ signal }: { signal: PaperSignalRecommendationRow }) {
           <span className="rounded-full border border-cyan-200/30 bg-cyan-300/[0.08] px-3 py-1 text-xs font-medium text-cyan-100">Real execution locked</span>
         </div>
       </div>
+
+      {isConvertibleToDraft(signal) ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/5 bg-black/10 px-4 py-3">
+          <p className="max-w-xl text-xs text-slate-400">
+            Converting creates a draft trade intent only. It does not submit the draft for Risk Constitution review and does not open a paper position.
+          </p>
+          <ConvertSignalToDraftButton signalId={signal.id} />
+        </div>
+      ) : signal.converted_trade_intent_id ? (
+        <div className="mt-4 rounded-xl border border-white/5 bg-black/10 px-4 py-3 text-xs text-slate-400">
+          Converted to a draft trade intent. See{" "}
+          <Link href="/capital/trade-intents" className="text-cyan-200 underline underline-offset-2">
+            Trade Intents
+          </Link>
+          .
+        </div>
+      ) : null}
     </div>
   );
 }

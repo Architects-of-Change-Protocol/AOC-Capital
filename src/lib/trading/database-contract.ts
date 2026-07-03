@@ -28,8 +28,10 @@ export type MarketSignalRow = {
 };
 
 export type TradeIntentSide = "buy" | "sell";
-export type TradeIntentSource = "manual" | "signal";
-export type TradeIntentStatus = "pending" | "approved" | "rejected" | "closed";
+/** 'signal_recommendation' = converted from a Signal Engine v1 paper_signal_recommendations row (see paper_signal_recommendation_id below); 'signal' = the older, unrelated market_signals-based flow (signal_id). */
+export type TradeIntentSource = "manual" | "signal" | "signal_recommendation";
+/** 'draft' = created from a signal handoff, never evaluated by the risk policy engine and never opened as a paper position — see 20260909000000_aoc_capital_signal_trade_intent_draft_handoff.sql. */
+export type TradeIntentStatus = "draft" | "pending" | "approved" | "rejected" | "closed";
 
 export type TradeIntentRow = {
   id: string;
@@ -42,6 +44,8 @@ export type TradeIntentRow = {
   leverage: number;
   source: TradeIntentSource;
   signal_id: string | null;
+  /** Set when source = 'signal_recommendation' — the paper_signal_recommendations row this draft was converted from. */
+  paper_signal_recommendation_id: string | null;
   status: TradeIntentStatus;
   created_by: string;
   created_at: string;
@@ -163,7 +167,8 @@ export type AuditLedgerEventType =
   | "demo_scenario_loaded"
   | "demo_scenario_reset"
   | "strategy_selected"
-  | "signals_generated";
+  | "signals_generated"
+  | "signal_converted_to_draft_trade_intent";
 
 export type AuditLedgerRow = {
   id: string;
@@ -214,6 +219,10 @@ export type PaperSignalRecommendationRow = {
   paper_only: true;
   real_execution_locked: true;
   status: string;
+  /** Set once this signal has been converted to a draft trade intent — see src/lib/capital/signal-trade-intent-handoff-service.ts. A signal can be converted at most once. */
+  converted_trade_intent_id: string | null;
+  converted_at: string | null;
+  converted_by: string | null;
   generated_at: string;
   created_at: string;
 };

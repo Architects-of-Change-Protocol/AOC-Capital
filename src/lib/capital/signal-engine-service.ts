@@ -53,8 +53,8 @@ export class StaleSelectedStrategyError extends Error {
   }
 }
 
-const PAPER_SIGNAL_RECOMMENDATION_COLUMNS =
-  "id,company_id,portfolio_id,strategy_key,strategy_name,symbol,action,strength,confidence_score,suggested_notional_usd,market_price_usd,market_data_source,rationale,risk_notes,blocked_reasons,required_user_action,paper_only,real_execution_locked,status,generated_at,created_at";
+export const PAPER_SIGNAL_RECOMMENDATION_COLUMNS =
+  "id,company_id,portfolio_id,strategy_key,strategy_name,symbol,action,strength,confidence_score,suggested_notional_usd,market_price_usd,market_data_source,rationale,risk_notes,blocked_reasons,required_user_action,paper_only,real_execution_locked,status,converted_trade_intent_id,converted_at,converted_by,generated_at,created_at";
 
 const RISK_HEALTH_TO_SIGNAL_RISK_HEALTH: Record<StrategyHealth, "healthy" | "caution" | "breach"> = {
   healthy: "healthy",

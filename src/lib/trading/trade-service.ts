@@ -381,7 +381,7 @@ export async function listTradeIntents(companyId: string): Promise<TradeIntentRo
   const supabase = await client();
   const { data } = await supabase
     .from("trade_intents")
-    .select("id,company_id,portfolio_id,symbol,side,quantity,notional_usd,leverage,source,signal_id,status,created_by,created_at")
+    .select("id,company_id,portfolio_id,symbol,side,quantity,notional_usd,leverage,source,signal_id,paper_signal_recommendation_id,status,created_by,created_at")
     .eq("company_id", companyId)
     .order("created_at", { ascending: false })
     .limit(50);
