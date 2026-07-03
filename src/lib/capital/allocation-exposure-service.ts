@@ -268,7 +268,11 @@ export type AllocationSummary = {
 export function deriveAllocationSummary(input: AllocationSummaryInput): AllocationSummary {
   const totalPnlUsd = input.realizedPnlUsd + input.unrealizedPnlUsd;
   const simulatedPortfolioValueUsd = input.baseCapitalUsd + totalPnlUsd;
-  const availableSimulatedCashUsd = input.baseCapitalUsd - input.openExposureUsd + input.realizedPnlUsd;
+  // openExposureUsd is current (marked-to-market) notional, so baseCapitalUsd - openExposureUsd + realizedPnlUsd
+  // would double-count unrealized P&L (once via price movement in openExposureUsd, once via simulatedPortfolioValueUsd).
+  // Subtracting openExposureUsd from simulatedPortfolioValueUsd instead cancels the unrealized P&L component,
+  // leaving cash tied to cost basis + realized P&L only — consistent with portfolio-summary.ts's cash model.
+  const availableSimulatedCashUsd = simulatedPortfolioValueUsd - input.openExposureUsd;
   const exposureRatio = input.baseCapitalUsd > 0 ? input.openExposureUsd / input.baseCapitalUsd : null;
   const largestSymbolWeight = input.openExposureUsd > 0 ? input.largestSymbolExposureUsd / input.openExposureUsd : null;
   const concentrationStatus = deriveConcentrationStatus(largestSymbolWeight);
