@@ -3,19 +3,22 @@
 // The only place a strategy selection touches the database. Re-validates the
 // strategyKey against the static library server-side (never trusts a
 // client-supplied strategy name/risk-profile/symbols/capabilities), then
-// upserts the tenant's single portfolio_strategy_profiles row and writes the
-// strategy_selected audit event, both through the existing privileged,
-// service-role write path in src/lib/trading/trade-service.ts.
+// calls select_portfolio_strategy_profile_and_audit()
+// (20260908000000_aoc_capital_atomic_audit_writes.sql) through the existing
+// privileged, service-role write path in src/lib/trading/trade-service.ts.
+// That RPC upserts the tenant's single portfolio_strategy_profiles row and
+// writes the strategy_selected audit event in one database transaction.
 //
 // This never creates a trade intent, never opens a paper position, and never
 // touches risk_constitution_rules — selecting a strategy only records
-// context. If the audit write fails, the whole selection fails (no
-// silent selection without an audit trail): the audit write happens after the
-// row upsert, and any error it throws propagates to the caller without a
-// fallback that would leave the selection "successful" without a record.
+// context. Governed state and its audit evidence share the same transaction
+// boundary: if the audit insert inside the RPC fails, the profile upsert
+// rolls back too, and if the profile upsert fails, the audit event is never
+// written. There is no partial-write window and no separate application-level
+// audit-ledger write for this flow.
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getOrCreateDefaultPortfolio, privileged, recordAuditEvent } from "@/lib/trading/trade-service";
+import { getOrCreateDefaultPortfolio, privileged } from "@/lib/trading/trade-service";
 import type { PortfolioStrategyProfileRow } from "@/lib/trading/database-contract";
 import { assertStrategyIsPaperOnly, getStrategyByKey, validateStrategySelection, type StrategyLibraryItem } from "./strategy-library";
 
@@ -55,11 +58,14 @@ export type SelectStrategyResult = {
 
 /**
  * Selects a strategy for the caller's tenant: validates strategyKey against
- * the static library, re-derives the full strategy config server-side,
- * upserts the single portfolio_strategy_profiles row (one per portfolio, see
- * the unique(company_id, portfolio_id) constraint), and writes the
- * strategy_selected audit event. Never opens a paper position, never creates
- * a trade intent, and never enables real execution.
+ * the static library, re-derives the full strategy config server-side, then
+ * calls select_portfolio_strategy_profile_and_audit() to atomically upsert
+ * the single portfolio_strategy_profiles row (one per portfolio, see the
+ * unique(company_id, portfolio_id) constraint) and write the
+ * strategy_selected audit event in one database transaction — governed state
+ * without audit evidence is incomplete state, so the two never commit
+ * separately. Never opens a paper position, never creates a trade intent,
+ * and never enables real execution.
  */
 export async function selectStrategy(input: SelectStrategyInput): Promise<SelectStrategyResult> {
   const validation = validateStrategySelection(input.strategyKey);
@@ -72,56 +78,31 @@ export async function selectStrategy(input: SelectStrategyInput): Promise<Select
   const portfolio = await getOrCreateDefaultPortfolio(input.companyId);
 
   const supabase = privileged("capital/strategy-library", "select_strategy", input.companyId, input.actorUserId);
-  const { data, error } = await supabase
-    .from("portfolio_strategy_profiles")
-    .upsert(
-      {
-        company_id: input.companyId,
-        portfolio_id: portfolio.id,
-        strategy_key: strategy.key,
-        strategy_name: strategy.name,
-        risk_profile: strategy.riskProfile,
-        supported_symbols: strategy.supportedSymbols,
-        paper_only: true,
-        real_execution_locked: true,
-        selected_at: new Date().toISOString(),
-        selected_by: input.actor,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "company_id,portfolio_id" }
-    )
-    .select(PORTFOLIO_STRATEGY_PROFILE_COLUMNS)
-    .single();
+  const { data, error } = await supabase.rpc("select_portfolio_strategy_profile_and_audit", {
+    p_company_id: input.companyId,
+    p_portfolio_id: portfolio.id,
+    p_strategy_key: strategy.key,
+    p_strategy_name: strategy.name,
+    p_risk_profile: strategy.riskProfile,
+    p_supported_symbols: strategy.supportedSymbols,
+    p_actor: input.actor,
+    p_audit_payload: {
+      paper_only: true,
+      real_execution_locked: true,
+      portfolio_id: portfolio.id,
+      strategy_key: strategy.key,
+      strategy_name: strategy.name,
+      risk_profile: strategy.riskProfile,
+      supported_symbols: strategy.supportedSymbols,
+      allowed_capabilities: strategy.allowedCapabilities,
+      blocked_capabilities: strategy.blockedCapabilities,
+    },
+  });
 
   if (error || !data) {
     throw new Error(`Unable to select strategy: ${error?.message ?? "unknown error"}`);
   }
   const profile = data as PortfolioStrategyProfileRow;
-
-  // If this throws, the caller sees the failure — the selection is not
-  // considered successful without an audit record.
-  await recordAuditEvent(
-    {
-      company_id: input.companyId,
-      event_type: "strategy_selected",
-      subject_type: "portfolio",
-      subject_id: portfolio.id,
-      actor: input.actor,
-      payload: {
-        paper_only: true,
-        real_execution_locked: true,
-        portfolio_id: portfolio.id,
-        strategy_key: strategy.key,
-        strategy_name: strategy.name,
-        risk_profile: strategy.riskProfile,
-        supported_symbols: strategy.supportedSymbols,
-        allowed_capabilities: strategy.allowedCapabilities,
-        blocked_capabilities: strategy.blockedCapabilities,
-        selected_at: profile.selected_at,
-      },
-    },
-    input.actorUserId
-  );
 
   return { strategy, profile };
 }

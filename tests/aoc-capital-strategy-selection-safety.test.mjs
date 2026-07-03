@@ -8,8 +8,10 @@
 //   - a strategy selection is always validated against the static library
 //     before any write
 //   - the write goes through the governed, tenant-scoped, service-role client
-//   - the audit event write is not swallowed — a failure there fails the
-//     whole selection
+//   - the profile write and the strategy_selected audit event commit
+//     atomically through select_portfolio_strategy_profile_and_audit() — the
+//     old separate-upsert-then-recordAuditEvent pattern (PR #10's partial-
+//     write gap) is gone
 //   - client-submitted strategy details (name, risk profile, symbols,
 //     capabilities) are never persisted from the request body — only the key
 //     is read, and everything else is re-derived server-side
@@ -35,7 +37,7 @@ const selectStrategyBody = extractFunction(serviceTs, "export async function sel
 test("selectStrategy validates the strategyKey against the static library before any write", () => {
   const validateIndex = selectStrategyBody.indexOf("validateStrategySelection(input.strategyKey)");
   const firstWriteIndex = Math.min(
-    ...["getOrCreateDefaultPortfolio(", "privileged(", ".upsert(", "recordAuditEvent("].map((needle) => {
+    ...["getOrCreateDefaultPortfolio(", "privileged(", ".rpc("].map((needle) => {
       const index = selectStrategyBody.indexOf(needle);
       return index === -1 ? Infinity : index;
     })
@@ -57,8 +59,9 @@ test("selectStrategy re-derives the full strategy config from validation.strateg
 
 test("selectStrategy runs assertStrategyIsPaperOnly as a defense-in-depth guardrail before writing", () => {
   const assertIndex = selectStrategyBody.indexOf("assertStrategyIsPaperOnly(strategy)");
-  const writeIndex = selectStrategyBody.indexOf(".upsert(");
+  const writeIndex = selectStrategyBody.indexOf(".rpc(");
   assert.ok(assertIndex >= 0, "expected a call to assertStrategyIsPaperOnly(strategy)");
+  assert.ok(writeIndex >= 0, "expected selectStrategy to call .rpc(");
   assert.ok(assertIndex < writeIndex, "the paper-only guardrail must run before the write");
 });
 
@@ -71,18 +74,41 @@ test("selectStrategy writes through the governed service-role client (privileged
   assert.match(selectStrategyBody, /privileged\("capital\/strategy-library"/);
 });
 
-test("selectStrategy writes the strategy_selected audit event, and a failure there is not swallowed", () => {
-  const auditCallIndex = selectStrategyBody.indexOf('event_type: "strategy_selected"');
-  assert.ok(auditCallIndex >= 0, "expected selectStrategy to write a strategy_selected audit event");
-  // The audit call must not be wrapped in a try/catch that swallows errors —
-  // there should be no catch block between the await recordAuditEvent( call
-  // and the function's closing return.
-  const afterAudit = selectStrategyBody.slice(selectStrategyBody.indexOf("await recordAuditEvent("));
-  assert.doesNotMatch(afterAudit.slice(0, afterAudit.indexOf("return { strategy, profile }")), /catch/);
+// ─── Atomic governed write + audit (PR #10) ─────────────────────────────────
+// The profile upsert and the strategy_selected audit event used to be two
+// separate application-level writes: an .upsert() on portfolio_strategy_
+// profiles followed by a recordAuditEvent() call. If the second write failed
+// after the first succeeded, governed state could persist without audit
+// evidence. select_portfolio_strategy_profile_and_audit() closes that gap by
+// doing both in one database transaction — these tests pin down that the old
+// pattern cannot reappear.
+
+test("selectStrategy calls the select_portfolio_strategy_profile_and_audit RPC to persist the profile and audit event atomically", () => {
+  assert.match(selectStrategyBody, /\.rpc\(\s*"select_portfolio_strategy_profile_and_audit"/);
+});
+
+test("selectStrategy never calls recordAuditEvent — the audit write happens inside the atomic RPC, not as a separate application-level write", () => {
+  assert.doesNotMatch(serviceTs, /recordAuditEvent/);
+});
+
+test("selectStrategy never upserts directly into portfolio_strategy_profiles from the application layer — only the atomic RPC writes that table", () => {
+  assert.doesNotMatch(serviceTs, /\.from\(\s*"portfolio_strategy_profiles"\s*\)\s*\.upsert\(/);
+});
+
+test("selectStrategy builds an audit payload describing the strategy_selected event and passes it to the atomic RPC in the same call, not a separate write", () => {
+  const rpcCallIndex = selectStrategyBody.indexOf('.rpc("select_portfolio_strategy_profile_and_audit"');
+  assert.ok(rpcCallIndex >= 0);
+  const rpcCall = selectStrategyBody.slice(rpcCallIndex, selectStrategyBody.indexOf("return { strategy, profile }"));
+  assert.match(rpcCall, /p_audit_payload:\s*\{/);
+  assert.match(rpcCall, /strategy_key:\s*strategy\.key,/);
 });
 
 test("selectStrategy never creates a trade intent or paper position", () => {
   assert.doesNotMatch(serviceTs, /createTradeIntent|closePaperPosition|markPositionToMarket|evaluate_and_record_trade_intent/);
+});
+
+test("selectStrategy never references trade_intents or paper_positions", () => {
+  assert.doesNotMatch(serviceTs, /trade_intents|paper_positions/);
 });
 
 test("selectStrategy and its route never reference real-execution, broker, API key, or withdrawal capabilities as anything other than blocked-capability strings", () => {
