@@ -30,8 +30,8 @@ export type MarketSignalRow = {
 export type TradeIntentSide = "buy" | "sell";
 /** 'signal_recommendation' = converted from a Signal Engine v1 paper_signal_recommendations row (see paper_signal_recommendation_id below); 'signal' = the older, unrelated market_signals-based flow (signal_id). */
 export type TradeIntentSource = "manual" | "signal" | "signal_recommendation";
-/** 'draft' = created from a signal handoff, never evaluated by the risk policy engine and never opened as a paper position — see 20260909000000_aoc_capital_signal_trade_intent_draft_handoff.sql. */
-export type TradeIntentStatus = "draft" | "pending" | "approved" | "rejected" | "closed";
+/** 'draft' = created from a signal handoff, never evaluated by the risk policy engine and never opened as a paper position — see 20260909000000_aoc_capital_signal_trade_intent_draft_handoff.sql. 'cancelled' = a draft explicitly withdrawn by the user before Risk Constitution review — terminal, never submittable — see 20260912000000_aoc_capital_cancel_draft_trade_intent.sql. */
+export type TradeIntentStatus = "draft" | "pending" | "approved" | "rejected" | "closed" | "cancelled";
 
 export type TradeIntentRow = {
   id: string;
@@ -49,6 +49,9 @@ export type TradeIntentRow = {
   status: TradeIntentStatus;
   created_by: string;
   created_at: string;
+  /** Set only when status = 'cancelled' — see cancel_draft_trade_intent_and_audit(). */
+  cancelled_at: string | null;
+  cancelled_by: string | null;
 };
 
 export type TradeDecisionVerdict = "approved" | "rejected";
@@ -169,7 +172,8 @@ export type AuditLedgerEventType =
   | "strategy_selected"
   | "signals_generated"
   | "signal_converted_to_draft_trade_intent"
-  | "trade_intent_submitted_for_review";
+  | "trade_intent_submitted_for_review"
+  | "draft_trade_intent_cancelled";
 
 export type AuditLedgerRow = {
   id: string;
