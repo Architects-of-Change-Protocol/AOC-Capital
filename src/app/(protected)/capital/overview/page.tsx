@@ -114,6 +114,14 @@ export default async function PortfolioOverviewDashboardPage() {
           ))}
         </div>
         <p className="mt-4 text-xs text-slate-500">{FRESHNESS_NOTE}</p>
+        <div className="mt-4">
+          <Link
+            href={NAV_LINKS.allocation}
+            className="inline-block rounded-full border border-cyan-200/30 bg-cyan-300/[0.1] px-4 py-2 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/[0.2]"
+          >
+            View Allocation & Exposure →
+          </Link>
+        </div>
       </div>
 
       {/* Section 1: Portfolio Summary */}
