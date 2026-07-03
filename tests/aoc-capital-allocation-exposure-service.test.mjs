@@ -149,11 +149,42 @@ test("deriveAllocationSummary: computes simulated portfolio value, cash, exposur
 
   assert.equal(result.totalPnlUsd, 30);
   assert.equal(result.simulatedPortfolioValueUsd, 1030);
-  assert.equal(result.availableSimulatedCashUsd, 610);
+  assert.equal(result.availableSimulatedCashUsd, 630);
   assert.equal(result.exposureRatio, 0.4);
   assert.equal(result.largestSymbolWeight, 0.75);
   assert.equal(result.concentrationStatus, "high_concentration");
   assert.ok(result.exposureLimitUsage > 0.6 && result.exposureLimitUsage < 0.7);
+});
+
+test("deriveAllocationSummary: available cash reflects cost basis, not mark-to-market swings — unrealized gains don't reduce displayed cash", () => {
+  // $1,000 base capital, a position entered at $600 now marked at $700 (unrealized +$100), no realized P&L.
+  // Only $600 was ever committed, so cash should still read $400 — not $300 (which double-counts the unrealized gain).
+  const result = deriveAllocationSummary({
+    baseCapitalUsd: 1000,
+    openExposureUsd: 700,
+    unrealizedPnlUsd: 100,
+    realizedPnlUsd: 0,
+    largestSymbolExposureUsd: 700,
+    maxExposureRatio: 0.6,
+  });
+
+  assert.equal(result.simulatedPortfolioValueUsd, 1100);
+  assert.equal(result.availableSimulatedCashUsd, 400);
+});
+
+test("deriveAllocationSummary: available cash is unaffected by an unrealized loss either — still reflects cost basis", () => {
+  // Same $600 entry, now marked at $500 (unrealized -$100). Cash committed is still $600, so cash remaining is still $400.
+  const result = deriveAllocationSummary({
+    baseCapitalUsd: 1000,
+    openExposureUsd: 500,
+    unrealizedPnlUsd: -100,
+    realizedPnlUsd: 0,
+    largestSymbolExposureUsd: 500,
+    maxExposureRatio: 0.6,
+  });
+
+  assert.equal(result.simulatedPortfolioValueUsd, 900);
+  assert.equal(result.availableSimulatedCashUsd, 400);
 });
 
 test("deriveAllocationSummary: no open exposure -> no_data concentration, idle posture", () => {
