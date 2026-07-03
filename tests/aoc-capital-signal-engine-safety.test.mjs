@@ -7,8 +7,10 @@
 // inspect the service and API route source to pin down that:
 //   - a missing or stale selected strategy fails safely, before any write
 //   - the write goes through the governed, tenant-scoped, service-role client
-//   - the audit event write is not swallowed — a failure there fails the
-//     whole generation
+//   - the signal-row inserts and the signals_generated audit event commit
+//     atomically through insert_paper_signal_recommendations_and_audit() —
+//     the old separate-insert-then-recordAuditEvent pattern (PR #10's
+//     partial-write gap) is gone
 //   - the POST /generate route never reads strategyKey/symbols/notional/
 //     action from the request body — the whole body is never even parsed
 //   - signal generation never creates a trade intent or paper position
@@ -76,13 +78,6 @@ test("generateSignals writes through the governed service-role client (privilege
   assert.match(generateSignalsBody, /privileged\("capital\/signal-engine"/);
 });
 
-test("generateSignals writes the signals_generated audit event, and a failure there is not swallowed", () => {
-  const auditCallIndex = generateSignalsBody.indexOf('event_type: "signals_generated"');
-  assert.ok(auditCallIndex >= 0, "expected generateSignals to write a signals_generated audit event");
-  const afterAudit = generateSignalsBody.slice(generateSignalsBody.indexOf("await recordAuditEvent("));
-  assert.doesNotMatch(afterAudit.slice(0, afterAudit.indexOf("return { signals: persisted")), /catch/);
-});
-
 test("listSignalRecommendations is read-only — it never inserts, updates, deletes, or writes an audit event", () => {
   const listBody = extractFunction(serviceTs, "export async function listSignalRecommendations");
   assert.doesNotMatch(listBody, /\.insert\(|\.update\(|\.delete\(|\.upsert\(|privileged\(|recordAuditEvent\(/);
@@ -90,6 +85,36 @@ test("listSignalRecommendations is read-only — it never inserts, updates, dele
 
 test("the GET /signals route never generates a new signal batch and never calls generateSignals", () => {
   assert.doesNotMatch(getRouteTs, /generateSignals\(/);
+});
+
+// ─── Atomic governed write + audit (PR #10) ─────────────────────────────────
+// The signal-row inserts and the signals_generated audit event used to be
+// two separate application-level writes: a batch .insert() on
+// paper_signal_recommendations followed by a recordAuditEvent() call. If the
+// second write failed after the first succeeded, governed state could
+// persist without audit evidence.
+// insert_paper_signal_recommendations_and_audit() closes that gap by doing
+// both in one database transaction — these tests pin down that the old
+// pattern cannot reappear.
+
+test("generateSignals calls the insert_paper_signal_recommendations_and_audit RPC to persist signals and the audit event atomically", () => {
+  assert.match(generateSignalsBody, /\.rpc\(\s*"insert_paper_signal_recommendations_and_audit"/);
+});
+
+test("generateSignals never calls recordAuditEvent — the audit write happens inside the atomic RPC, not as a separate application-level write", () => {
+  assert.doesNotMatch(serviceTs, /recordAuditEvent/);
+});
+
+test("generateSignals never inserts directly into paper_signal_recommendations from the application layer — only the atomic RPC writes that table", () => {
+  assert.doesNotMatch(serviceTs, /\.from\(\s*"paper_signal_recommendations"\s*\)\s*\.insert\(/);
+});
+
+test("generateSignals builds an audit payload describing the signals_generated event and passes it to the atomic RPC in the same call, not a separate write", () => {
+  const rpcCallIndex = generateSignalsBody.indexOf('.rpc("insert_paper_signal_recommendations_and_audit"');
+  assert.ok(rpcCallIndex >= 0);
+  const rpcCall = generateSignalsBody.slice(rpcCallIndex, generateSignalsBody.indexOf("return { signals: persisted"));
+  assert.match(rpcCall, /p_audit_payload:\s*\{/);
+  assert.match(rpcCall, /signals_count:\s*signals\.length,/);
 });
 
 // ─── Never touches trade intents or paper positions ─────────────────────────

@@ -5,16 +5,19 @@
 // strategy key, symbol list, notional, or action), builds SignalEngineInput
 // from live market data / portfolio state / the Risk Constitution / the
 // Strategy Performance Review, hands it to the pure generatePaperSignals()
-// engine, persists every resulting row through the existing privileged,
-// service-role write path (src/lib/trading/trade-service.ts), and writes the
-// signals_generated audit event.
+// engine, and calls insert_paper_signal_recommendations_and_audit()
+// (20260908000000_aoc_capital_atomic_audit_writes.sql) through the existing
+// privileged, service-role write path (src/lib/trading/trade-service.ts).
+// That RPC inserts every resulting row and writes the signals_generated
+// audit event in one database transaction.
 //
 // This never creates a trade intent, never opens a paper position, and never
-// touches trade_intents/paper_positions in any way. If the audit write
-// fails, the whole generation fails (no silent generation without an audit
-// trail) — the audit write happens after persistence, and any error it
-// throws propagates to the caller without a fallback that would leave
-// generation "successful" without a record.
+// touches trade_intents/paper_positions in any way. Governed state and its
+// audit evidence share the same transaction boundary: if the audit insert
+// inside the RPC fails, every inserted signal row rolls back too, and if any
+// signal row insert fails, the audit event is never written. There is no
+// partial-write window and no separate application-level audit-ledger write
+// for this flow.
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -24,7 +27,6 @@ import {
   getPortfolioSummary,
   getStrategyPerformance,
   privileged,
-  recordAuditEvent,
   type MarketDataSnapshotEntry,
 } from "@/lib/trading/trade-service";
 import { getMarketDataMode, type MarketDataMode } from "@/lib/trading/live-price-provider";
@@ -134,9 +136,10 @@ export type GenerateSignalsResult = {
  * caller's tenant. Resolves the selected strategy strictly server-side (a
  * missing or stale selection fails safely with a dedicated error, never a
  * generic 500), builds SignalEngineInput from live data, runs the pure
- * generatePaperSignals() engine, persists every resulting row, and writes
- * the signals_generated audit event. Never creates a trade intent, never
- * opens a paper position, never enables real execution.
+ * generatePaperSignals() engine, and atomically persists every resulting row
+ * together with the signals_generated audit event via
+ * insert_paper_signal_recommendations_and_audit(). Never creates a trade
+ * intent, never opens a paper position, never enables real execution.
  */
 export async function generateSignals(input: GenerateSignalsInput): Promise<GenerateSignalsResult> {
   const portfolio = await getOrCreateDefaultPortfolio(input.companyId);
@@ -191,67 +194,49 @@ export async function generateSignals(input: GenerateSignalsInput): Promise<Gene
 
   const signals: PaperSignalRecommendation[] = generatePaperSignals(engineInput);
 
-  const supabase = privileged("capital/signal-engine", "generate_signals", input.companyId, input.actorUserId);
-  const { data, error } = await supabase
-    .from("paper_signal_recommendations")
-    .insert(
-      signals.map((signal) => ({
-        id: signal.id,
-        company_id: input.companyId,
-        portfolio_id: portfolio.id,
-        strategy_key: signal.strategyKey,
-        strategy_name: signal.strategyName,
-        symbol: signal.symbol,
-        action: signal.action,
-        strength: signal.strength,
-        confidence_score: signal.confidenceScore,
-        suggested_notional_usd: signal.suggestedNotionalUsd,
-        market_price_usd: signal.marketPriceUsd,
-        market_data_source: signal.marketDataSource,
-        rationale: signal.rationale,
-        risk_notes: signal.riskNotes,
-        blocked_reasons: signal.blockedReasons,
-        required_user_action: signal.requiredUserAction,
-        paper_only: true,
-        real_execution_locked: true,
-        status: signal.status,
-        generated_at: signal.generatedAt,
-      }))
-    )
-    .select(PAPER_SIGNAL_RECOMMENDATION_COLUMNS);
-
-  if (error || !data) throw new Error(`Unable to persist generated signals: ${error?.message ?? "unknown error"}`);
-  const persisted = data as PaperSignalRecommendationRow[];
-
   const actionCounts: Record<string, number> = {};
   for (const signal of signals) {
     actionCounts[signal.action] = (actionCounts[signal.action] ?? 0) + 1;
   }
 
-  // If this throws, the caller sees the failure — generation is not
-  // considered successful without an audit record, even though the rows
-  // above are already persisted.
-  await recordAuditEvent(
-    {
-      company_id: input.companyId,
-      event_type: "signals_generated",
-      subject_type: "portfolio",
-      subject_id: portfolio.id,
-      actor: input.actor,
-      payload: {
-        paper_only: true,
-        real_execution_locked: true,
-        portfolio_id: portfolio.id,
-        strategy_key: strategy.key,
-        strategy_name: strategy.name,
-        signals_count: signals.length,
-        actions: actionCounts,
-        symbols: strategy.supportedSymbols,
-        risk_gated: signals.some((signal) => signal.status === "blocked_by_risk"),
-      },
+  const supabase = privileged("capital/signal-engine", "generate_signals", input.companyId, input.actorUserId);
+  const { data, error } = await supabase.rpc("insert_paper_signal_recommendations_and_audit", {
+    p_company_id: input.companyId,
+    p_portfolio_id: portfolio.id,
+    p_actor: input.actor,
+    p_signals: signals.map((signal) => ({
+      id: signal.id,
+      strategy_key: signal.strategyKey,
+      strategy_name: signal.strategyName,
+      symbol: signal.symbol,
+      action: signal.action,
+      strength: signal.strength,
+      confidence_score: signal.confidenceScore,
+      suggested_notional_usd: signal.suggestedNotionalUsd,
+      market_price_usd: signal.marketPriceUsd,
+      market_data_source: signal.marketDataSource,
+      rationale: signal.rationale,
+      risk_notes: signal.riskNotes,
+      blocked_reasons: signal.blockedReasons,
+      required_user_action: signal.requiredUserAction,
+      status: signal.status,
+      generated_at: signal.generatedAt,
+    })),
+    p_audit_payload: {
+      paper_only: true,
+      real_execution_locked: true,
+      portfolio_id: portfolio.id,
+      strategy_key: strategy.key,
+      strategy_name: strategy.name,
+      signals_count: signals.length,
+      actions: actionCounts,
+      symbols: strategy.supportedSymbols,
+      risk_gated: signals.some((signal) => signal.status === "blocked_by_risk"),
     },
-    input.actorUserId
-  );
+  });
+
+  if (error || !data) throw new Error(`Unable to persist generated signals: ${error?.message ?? "unknown error"}`);
+  const persisted = data as PaperSignalRecommendationRow[];
 
   return { signals: persisted, selectedStrategy: strategy };
 }
