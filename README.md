@@ -8,7 +8,9 @@ A self-contained paper-trading module lives under `/capital` (the **Capital Comm
 
 Screens:
 - `/capital` — Portfolio Overview (exposure, P&L, Strategy Health)
-- `/capital/signals` — Market Signals (deterministic mock feed)
+- `/capital/strategies` — Strategy Library (paper-only strategy profiles)
+- `/capital/signals` — Signal Engine (deterministic, paper-only strategy signal recommendations)
+- `/capital/market-signals` — Market Signals (legacy deterministic mock feed)
 - `/capital/market-data` — Market Data (live public-or-simulated price feed, read-only)
 - `/capital/trade-intents` — Trade Intents (create + view risk-policy decisions)
 - `/capital/positions` — Paper Positions

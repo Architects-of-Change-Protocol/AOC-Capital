@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAuthUser } from "@/lib/auth";
 import { getStrategyLibrary, type StrategyLibraryItem, type StrategyRiskProfile, type StrategyStatus } from "@/lib/capital/strategy-library";
 import { getSelectedStrategyProfile, resolveSelectedStrategy } from "@/lib/capital/strategy-selection-service";
@@ -140,6 +141,12 @@ export default async function StrategyLibraryPage() {
               This strategy is active for paper simulation only. Every paper trade intent remains governed by the Risk Constitution and
               must pass the risk policy engine before becoming a paper position.
             </p>
+            <Link
+              href="/capital/signals"
+              className="mt-3 inline-block rounded-full border border-cyan-200/30 bg-cyan-300/[0.1] px-4 py-2 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/[0.2]"
+            >
+              Generate Signals
+            </Link>
           </>
         ) : staleSelectedStrategy ? (
           <>
@@ -150,7 +157,13 @@ export default async function StrategyLibraryPage() {
             <p className="mt-1 max-w-2xl text-xs text-slate-500">{staleSelectedStrategy.reason}</p>
           </>
         ) : (
-          <p className="mt-2 text-sm text-slate-400">No strategy selected yet. Choose one below to give AOC Capital paper-trading context.</p>
+          <>
+            <p className="mt-2 text-sm text-slate-400">No strategy selected yet. Choose one below to give AOC Capital paper-trading context.</p>
+            <p className="mt-2 max-w-2xl text-xs text-slate-500">
+              Generate Signals becomes available once a strategy is selected — the Signal Engine never generates recommendations
+              automatically.
+            </p>
+          </>
         )}
       </div>
 
