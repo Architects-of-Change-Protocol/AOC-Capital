@@ -191,7 +191,9 @@ export default async function AllocationExposurePage() {
               {positions.map((p) => (
                 <div key={p.id} className="rounded-xl border border-white/5 bg-black/10 px-4 py-3 text-sm">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="font-medium text-white">{p.symbol}</span>
+                    <Link href={`/capital/positions/${p.id}`} className="font-medium text-white underline-offset-2 hover:text-cyan-100 hover:underline">
+                      {p.symbol}
+                    </Link>
                     <span className={`font-medium ${pnlClassName(p.unrealizedPnlUsd)}`}>
                       {fmtUsd(p.unrealizedPnlUsd)} {p.unrealizedPnlPct !== null ? `(${(p.unrealizedPnlPct * 100).toFixed(2)}%)` : ""}
                     </span>

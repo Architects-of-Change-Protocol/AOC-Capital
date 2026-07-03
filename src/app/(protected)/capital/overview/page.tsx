@@ -318,7 +318,9 @@ export default async function PortfolioOverviewDashboardPage() {
           {positions.recentOpen.map((position) => (
             <div key={position.id} className="rounded-xl border border-emerald-300/10 bg-black/10 px-4 py-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="font-medium text-white">{position.symbol}</span>
+                <Link href={`/capital/positions/${position.id}`} className="font-medium text-white underline-offset-2 hover:text-cyan-100 hover:underline">
+                  {position.symbol}
+                </Link>
                 <span className="rounded-full border border-emerald-300/30 bg-emerald-300/[0.08] px-3 py-1 text-xs text-emerald-200">Open</span>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400 sm:grid-cols-4">
