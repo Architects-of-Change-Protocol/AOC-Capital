@@ -114,12 +114,18 @@ export default async function PortfolioOverviewDashboardPage() {
           ))}
         </div>
         <p className="mt-4 text-xs text-slate-500">{FRESHNESS_NOTE}</p>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
           <Link
             href={NAV_LINKS.allocation}
             className="inline-block rounded-full border border-cyan-200/30 bg-cyan-300/[0.1] px-4 py-2 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/[0.2]"
           >
             View Allocation & Exposure →
+          </Link>
+          <Link
+            href={NAV_LINKS.closedPerformance}
+            className="inline-block rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-200 transition hover:border-cyan-200/30 hover:text-cyan-100"
+          >
+            View Closed Performance →
           </Link>
         </div>
       </div>

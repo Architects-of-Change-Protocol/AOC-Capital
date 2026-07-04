@@ -392,6 +392,9 @@ export default async function PositionDetailPage({ params }: Props) {
               <Link href={relatedLinks.performance} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
                 Open Performance Review
               </Link>
+              <Link href={relatedLinks.closedPerformance} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
+                Open Closed Performance
+              </Link>
             </div>
           </SectionCard>
         </div>

@@ -42,4 +42,5 @@ export const NAV_LINKS = {
   strategyLibrary: "/capital/strategies",
   performance: "/capital/performance",
   allocation: "/capital/allocation",
+  closedPerformance: "/capital/performance/closed",
 } as const;
