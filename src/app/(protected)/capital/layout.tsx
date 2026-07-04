@@ -9,6 +9,7 @@ const CAPITAL_NAV = [
   { href: "/capital/overview", label: "Portfolio Overview" },
   { href: "/capital/allocation", label: "Allocation & Exposure" },
   { href: "/capital/performance", label: "Strategy Performance" },
+  { href: "/capital/performance/closed", label: "Closed Performance" },
   { href: "/capital/signals", label: "Signal Engine" },
   { href: "/capital/market-signals", label: "Market Signals" },
   { href: "/capital/market-data", label: "Market Data" },
