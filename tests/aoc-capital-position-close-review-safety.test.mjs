@@ -16,6 +16,8 @@
 //     broker/exchange/order-routing capability
 //   - the route reads no request body and accepts only the path param id
 //   - the route returns the required governance response flags
+//   - the older quick-close route/UI (PR #17 hardening) is disabled and
+//     cannot mutate a paper position outside governed close review
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -24,6 +26,9 @@ import fs from "node:fs";
 const serviceTs = fs.readFileSync("src/lib/capital/position-close-review-service.ts", "utf8");
 const routeTs = fs.readFileSync("src/app/api/capital/positions/[id]/request-close-review/route.ts", "utf8");
 const contractTs = fs.readFileSync("src/lib/trading/database-contract.ts", "utf8");
+const legacyCloseRouteTs = fs.readFileSync("src/app/api/capital/paper-positions/[id]/close/route.ts", "utf8");
+const positionActionsTsx = fs.readFileSync("src/app/(protected)/capital/positions/paper-position-actions.tsx", "utf8");
+const positionsListPageTsx = fs.readFileSync("src/app/(protected)/capital/positions/page.tsx", "utf8");
 
 function extractFunction(source, exportSignature) {
   const start = source.indexOf(exportSignature);
@@ -155,4 +160,58 @@ test("PaperPositionCloseReviewRow is defined with the expected shape", () => {
   assert.match(contractTs, /export type PaperPositionCloseReviewRow = \{/);
   assert.match(contractTs, /paper_position_id: string;/);
   assert.match(contractTs, /decision: CloseReviewDecision;/);
+});
+
+// ─── Legacy quick-close route is disabled (PR #17 hardening) ────────────────
+// The codebase used to also expose POST /api/capital/paper-positions/[id]/
+// close, which bypassed governed close review entirely and refreshed
+// valuation (via closePaperPosition -> recordMarketPrice) before closing at
+// a freshly-fetched price. That conflicts with the product rule that a
+// paper position may be closed only through governed close review, using
+// only its already-stored valuation. These tests pin the legacy route down
+// as a disabled, non-mutating compatibility guard.
+
+test("the legacy quick-close route no longer calls closePaperPosition, markAllOpenPositions, or recordMarketPrice", () => {
+  assert.doesNotMatch(legacyCloseRouteTs, /closePaperPosition\(|markAllOpenPositions\(|recordMarketPrice\(/);
+});
+
+test("the legacy quick-close route does not call requestPaperPositionCloseReview or any RPC", () => {
+  assert.doesNotMatch(legacyCloseRouteTs, /requestPaperPositionCloseReview|\.rpc\(/);
+});
+
+test("the legacy quick-close route never touches paper_positions or audit_ledger", () => {
+  assert.doesNotMatch(legacyCloseRouteTs, /\.from\(\s*"paper_positions"\s*\)/);
+  assert.doesNotMatch(legacyCloseRouteTs, /\.from\(\s*"audit_ledger"\s*\)/);
+});
+
+test("the legacy quick-close route never reads a request body — there is nothing left for it to act on", () => {
+  const codeOnly = legacyCloseRouteTs.replace(/\/\*\*[\s\S]*?\*\//, "");
+  assert.doesNotMatch(codeOnly, /request\.json\(/);
+  assert.doesNotMatch(codeOnly, /parseClosePositionRequest/);
+});
+
+test("the legacy quick-close route always responds 410 Gone with safe, non-DB-leaking JSON", () => {
+  assert.match(legacyCloseRouteTs, /status:\s*410/);
+  assert.match(legacyCloseRouteTs, /Legacy paper position close is disabled\. Use governed paper close review from Position Detail\./);
+});
+
+test("the legacy quick-close route is POST only — no GET/PUT/DELETE handler is exported", () => {
+  assert.match(legacyCloseRouteTs, /export async function POST/);
+  assert.doesNotMatch(legacyCloseRouteTs, /export async function (GET|PUT|DELETE|PATCH)/);
+});
+
+test("the /capital/positions list no longer renders a Close Position mutation button or posts to the legacy close route", () => {
+  assert.doesNotMatch(positionActionsTsx, /Close Position/);
+  assert.doesNotMatch(positionActionsTsx, /\/api\/capital\/paper-positions\/\$\{positionId\}\/close/);
+  assert.doesNotMatch(positionsListPageTsx, /Close Position/);
+  assert.doesNotMatch(positionsListPageTsx, /\/api\/capital\/paper-positions\/\$\{[^}]*\}\/close/);
+});
+
+test("the /capital/positions list links every row out to Position Detail (the only place a close can be requested)", () => {
+  assert.match(positionsListPageTsx, /\/capital\/positions\/\$\{positionId\}/);
+  assert.match(positionsListPageTsx, /View Detail/);
+});
+
+test("PositionActions no longer accepts or sends a closeReason — mark-to-market only", () => {
+  assert.doesNotMatch(positionActionsTsx, /CloseReason|CLOSE_REASONS|closeReason/);
 });
