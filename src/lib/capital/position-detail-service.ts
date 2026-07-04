@@ -183,6 +183,14 @@ const AUDIT_EVENT_SUMMARY: Record<string, { title: string; describe: (payload: R
       return pnl ? `Paper position closed with realized P&L ${pnl}.` : "Paper position closed.";
     },
   },
+  paper_position_close_review_approved: {
+    title: "Paper close review approved",
+    describe: () => "Governed paper close review approved closing this simulated position.",
+  },
+  paper_position_closed: {
+    title: "Paper position closed",
+    describe: () => "Simulated paper position was closed using stored paper valuation. No real order was placed.",
+  },
   draft_trade_intent_cancelled: {
     title: "Draft trade intent cancelled",
     describe: () => "The draft trade intent was withdrawn before Risk Constitution review.",
@@ -246,6 +254,40 @@ export function derivePositionPnl(position: PositionPnlInput): PositionPnlResult
   else pnlStatus = "flat";
 
   return { unrealizedPnlUsd, unrealizedPnlPct, realizedPnlUsd, totalPnlUsd, pnlStatus };
+}
+
+// ─── deriveCloseReviewEligibility ─────────────────────────────────────────────
+
+export type CloseReviewEligibilityInput = {
+  status: "open" | "closed";
+  currentPriceUsd: number | null;
+  currentNotionalUsd: number | null;
+  entryNotionalUsd: number | null;
+  quantity: number;
+};
+
+export type CloseReviewEligibilityReason = "already_closed" | "not_open" | "missing_valuation";
+
+export type CloseReviewEligibilityResult = {
+  eligible: boolean;
+  reason: CloseReviewEligibilityReason | null;
+};
+
+/**
+ * Pure, deterministic mirror of the eligibility check enforced by
+ * requestPaperPositionCloseReview() (src/lib/capital/position-close-review-
+ * service.ts) and, authoritatively, by the governed close-review RPC it
+ * calls — used here only to decide what the Position Detail page renders
+ * (the CTA, the missing-valuation notice, or the closed notice). Never
+ * itself submits a close review or mutates anything.
+ */
+export function deriveCloseReviewEligibility(input: CloseReviewEligibilityInput): CloseReviewEligibilityResult {
+  if (input.status === "closed") return { eligible: false, reason: "already_closed" };
+  if (input.status !== "open") return { eligible: false, reason: "not_open" };
+  if (input.currentPriceUsd === null || input.currentNotionalUsd === null) return { eligible: false, reason: "missing_valuation" };
+  if (input.entryNotionalUsd === null) return { eligible: false, reason: "missing_valuation" };
+  if (!(input.quantity > 0)) return { eligible: false, reason: "missing_valuation" };
+  return { eligible: true, reason: null };
 }
 
 // ─── deriveTraceabilityStatus ─────────────────────────────────────────────────
@@ -326,6 +368,7 @@ export type TimelineEntryKind =
   | "risk_decision"
   | "position_opened"
   | "marked_to_market"
+  | "close_review_approved"
   | "position_closed"
   | "audit_event";
 
@@ -501,7 +544,13 @@ export function buildPositionLifecycleTimeline(input: LifecycleTimelineInput): T
   }
 
   if (input.position.closedAt) {
-    const closeAudit = findAuditEvents(input.auditEvents, ["position_closed"], input.position.id);
+    const closeReviewAudit = findAuditEvents(input.auditEvents, ["paper_position_close_review_approved"], input.position.id);
+    for (const event of closeReviewAudit) {
+      entries.push(fromAudit(event, "close_review_approved"));
+      consumed.add(event.id);
+    }
+
+    const closeAudit = findAuditEvents(input.auditEvents, ["position_closed", "paper_position_closed"], input.position.id);
     if (closeAudit.length > 0) {
       entries.push(fromAudit(closeAudit[0], "position_closed"));
       consume(closeAudit);
@@ -544,11 +593,21 @@ export type PositionDetail = {
     currentNotionalUsd: number | null;
     openedAt: string;
     closedAt: string | null;
+    /** Set only when status = 'closed' — the actor (email) who closed the position, via either close path. */
+    closedBy: string | null;
+    closeNotionalUsd: number | null;
+    /** Set only when status = 'closed' — null for positions closed before PR #17. */
+    realizedPnlPct: number | null;
+    /** Set only when closed through the governed close review path (PR #17). Null for positions closed through the older direct close path. */
+    closeReviewId: string | null;
     lastMarkedToMarketAt: string | null;
     tradeIntentId: string | null;
   };
 
   pnl: PositionPnlResult;
+
+  /** Whether this position may currently be submitted for governed close review — drives the Request Paper Close Review CTA. */
+  closeReviewEligibility: CloseReviewEligibilityResult;
 
   sourceChain: {
     strategy: {
@@ -710,6 +769,14 @@ export async function getPositionDetail(companyId: string, positionId: string): 
     realizedPnlUsd: position.status === "closed" ? position.realized_pnl_usd : null,
   });
 
+  const closeReviewEligibility = deriveCloseReviewEligibility({
+    status: position.status,
+    currentPriceUsd: position.current_price_usd,
+    currentNotionalUsd: position.current_notional_usd,
+    entryNotionalUsd: position.entry_notional_usd,
+    quantity: position.quantity,
+  });
+
   const timeline = buildPositionLifecycleTimeline({
     strategy: strategyNode.id ? { id: strategyNode.id, name: strategyNode.name ?? strategyNode.id, selectedAt: strategyNode.selectedAt } : null,
     signal: signal ? { id: signal.id, symbol: signal.symbol, action: signal.action, generatedAt: signal.generated_at } : null,
@@ -763,11 +830,17 @@ export async function getPositionDetail(companyId: string, positionId: string): 
       currentNotionalUsd: position.current_notional_usd,
       openedAt: position.opened_at,
       closedAt: position.closed_at,
+      closedBy: position.closed_by,
+      closeNotionalUsd: position.close_notional_usd,
+      realizedPnlPct: position.realized_pnl_pct,
+      closeReviewId: position.close_review_id,
       lastMarkedToMarketAt: position.last_marked_at,
       tradeIntentId: position.trade_intent_id,
     },
 
     pnl,
+
+    closeReviewEligibility,
 
     sourceChain: {
       strategy: strategyNode,

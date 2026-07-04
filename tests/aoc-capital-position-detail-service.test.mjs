@@ -1,7 +1,8 @@
 // ─── AOC Capital Position Detail & Lifecycle Timeline v1 (PR #16) — Pure
 // Function Tests ─────────────────────────────────────────────────────────────
 // derivePositionPnl(), deriveTraceabilityStatus(), buildPositionLifecycleTimeline(),
-// and summarizeAuditEvent() are pure, I/O-free functions
+// summarizeAuditEvent(), and deriveCloseReviewEligibility() (added by PR #17,
+// Governed Close Position Review) are pure, I/O-free functions
 // (src/lib/capital/position-detail-service.ts) — fully unit-testable the same
 // way groupPositionsBySymbol() and deriveAllocationSummary() are tested in
 // tests/aoc-capital-allocation-exposure-service.test.mjs.
@@ -15,6 +16,7 @@ const {
   buildPositionLifecycleTimeline,
   summarizeAuditEvent,
   extractGovernanceFlags,
+  deriveCloseReviewEligibility,
   TRACEABILITY_COMPLETE_MESSAGE,
   TRACEABILITY_PARTIAL_MESSAGE,
   TRACEABILITY_POSITION_ONLY_MESSAGE,
@@ -247,6 +249,100 @@ test("buildPositionLifecycleTimeline: de-duplicates a table-derived position_ope
   assert.equal(openedEntries.length, 1);
 });
 
+// ─── buildPositionLifecycleTimeline: governed close review (PR #17) ─────────
+
+test("buildPositionLifecycleTimeline: recognizes paper_position_close_review_approved as a close_review_approved entry", () => {
+  const timeline = buildPositionLifecycleTimeline({
+    strategy: null,
+    signal: null,
+    tradeIntent: null,
+    decision: null,
+    position: { ...BASE_POSITION, closedAt: "2026-01-06T00:00:00.000Z" },
+    auditEvents: [
+      {
+        id: "audit-review",
+        eventType: "paper_position_close_review_approved",
+        subjectType: "paper_position",
+        subjectId: "pos-1",
+        occurredAt: "2026-01-06T00:00:00.000Z",
+        payload: { paper_only: true, real_execution_locked: true },
+      },
+    ],
+  });
+  assert.ok(timeline.some((entry) => entry.kind === "close_review_approved"));
+});
+
+test("buildPositionLifecycleTimeline: recognizes paper_position_closed as a position_closed entry", () => {
+  const timeline = buildPositionLifecycleTimeline({
+    strategy: null,
+    signal: null,
+    tradeIntent: null,
+    decision: null,
+    position: { ...BASE_POSITION, closedAt: "2026-01-06T00:00:00.000Z" },
+    auditEvents: [
+      {
+        id: "audit-closed",
+        eventType: "paper_position_closed",
+        subjectType: "paper_position",
+        subjectId: "pos-1",
+        occurredAt: "2026-01-06T00:00:00.000Z",
+        payload: { paper_only: true, real_execution_locked: true },
+      },
+    ],
+  });
+  const closedEntries = timeline.filter((entry) => entry.kind === "position_closed");
+  assert.equal(closedEntries.length, 1);
+  assert.equal(closedEntries[0].id, "audit:audit-closed");
+});
+
+test("buildPositionLifecycleTimeline: orders the close review before the close event when the review is requested first", () => {
+  const timeline = buildPositionLifecycleTimeline({
+    strategy: null,
+    signal: null,
+    tradeIntent: null,
+    decision: null,
+    position: { ...BASE_POSITION, closedAt: "2026-01-06T00:05:00.000Z" },
+    auditEvents: [
+      {
+        id: "audit-closed",
+        eventType: "paper_position_closed",
+        subjectType: "paper_position",
+        subjectId: "pos-1",
+        occurredAt: "2026-01-06T00:05:00.000Z",
+        payload: {},
+      },
+      {
+        id: "audit-review",
+        eventType: "paper_position_close_review_approved",
+        subjectType: "paper_position",
+        subjectId: "pos-1",
+        occurredAt: "2026-01-06T00:00:00.000Z",
+        payload: {},
+      },
+    ],
+  });
+  const reviewIndex = timeline.findIndex((entry) => entry.kind === "close_review_approved");
+  const closedIndex = timeline.findIndex((entry) => entry.kind === "position_closed");
+  assert.ok(reviewIndex >= 0 && closedIndex >= 0);
+  assert.ok(reviewIndex < closedIndex, "the close review must appear before the close it approved");
+});
+
+test("buildPositionLifecycleTimeline: does not duplicate the close event when both position_closed and paper_position_closed audit events exist for the same position — only one position_closed entry is emitted", () => {
+  const timeline = buildPositionLifecycleTimeline({
+    strategy: null,
+    signal: null,
+    tradeIntent: null,
+    decision: null,
+    position: { ...BASE_POSITION, closedAt: "2026-01-06T00:00:00.000Z" },
+    auditEvents: [
+      { id: "audit-legacy", eventType: "position_closed", subjectType: "paper_position", subjectId: "pos-1", occurredAt: "2026-01-06T00:00:00.000Z", payload: {} },
+      { id: "audit-governed", eventType: "paper_position_closed", subjectType: "paper_position", subjectId: "pos-1", occurredAt: "2026-01-06T00:00:00.000Z", payload: {} },
+    ],
+  });
+  const closedEntries = timeline.filter((entry) => entry.kind === "position_closed");
+  assert.equal(closedEntries.length, 1, "only one position_closed timeline entry should ever be shown per position");
+});
+
 // ─── summarizeAuditEvent ──────────────────────────────────────────────────────
 
 test("summarizeAuditEvent: maps known event types to a human-readable title", () => {
@@ -287,7 +383,122 @@ test("summarizeAuditEvent: defaults governance flags safely when the payload has
   });
 });
 
+// ─── summarizeAuditEvent: governed close review (PR #17) ────────────────────
+
+test("summarizeAuditEvent: maps paper_position_close_review_approved to safe human-readable copy", () => {
+  const summary = summarizeAuditEvent({
+    eventType: "paper_position_close_review_approved",
+    subjectType: "paper_position",
+    subjectId: "pos-1",
+    payload: { paper_only: true, real_execution_locked: true },
+  });
+  assert.equal(summary.title, "Paper close review approved");
+  assert.equal(summary.description, "Governed paper close review approved closing this simulated position.");
+});
+
+test("summarizeAuditEvent: maps paper_position_closed to safe human-readable copy", () => {
+  const summary = summarizeAuditEvent({
+    eventType: "paper_position_closed",
+    subjectType: "paper_position",
+    subjectId: "pos-1",
+    payload: { paper_only: true, real_execution_locked: true },
+  });
+  assert.equal(summary.title, "Paper position closed");
+  assert.equal(summary.description, "Simulated paper position was closed using stored paper valuation. No real order was placed.");
+});
+
+test("summarizeAuditEvent: governance flags are extracted from paper_position_close_review_approved and paper_position_closed payloads", () => {
+  const payload = {
+    paper_only: true,
+    real_execution_locked: true,
+    no_real_execution: true,
+    no_broker_order: true,
+    no_order_placed: true,
+  };
+  const reviewSummary = summarizeAuditEvent({ eventType: "paper_position_close_review_approved", subjectType: "paper_position", subjectId: "pos-1", payload });
+  const closedSummary = summarizeAuditEvent({ eventType: "paper_position_closed", subjectType: "paper_position", subjectId: "pos-1", payload });
+  const expectedFlags = { paperOnly: true, realExecutionLocked: true, noRealExecution: true, noBrokerOrder: true, noOrderPlaced: true };
+  assert.deepEqual(reviewSummary.governanceFlags, expectedFlags);
+  assert.deepEqual(closedSummary.governanceFlags, expectedFlags);
+});
+
+test("summarizeAuditEvent: defaults governance flags safely for paper_position_close_review_approved and paper_position_closed when the payload carries none", () => {
+  const expectedFlags = { paperOnly: true, realExecutionLocked: true, noRealExecution: true, noBrokerOrder: true, noOrderPlaced: true };
+  assert.deepEqual(summarizeAuditEvent({ eventType: "paper_position_close_review_approved", subjectType: "paper_position", subjectId: "pos-1", payload: {} }).governanceFlags, expectedFlags);
+  assert.deepEqual(summarizeAuditEvent({ eventType: "paper_position_closed", subjectType: "paper_position", subjectId: "pos-1", payload: {} }).governanceFlags, expectedFlags);
+});
+
+test("summarizeAuditEvent: paper_position_close_review_approved and paper_position_closed copy never mentions execution/trading/broker/order-routing", () => {
+  const forbidden = /\bexecute\b|trading|broker|order-routing|place an? order|sell now|trade now/i;
+  const reviewSummary = summarizeAuditEvent({ eventType: "paper_position_close_review_approved", subjectType: "paper_position", subjectId: "pos-1", payload: {} });
+  const closedSummary = summarizeAuditEvent({ eventType: "paper_position_closed", subjectType: "paper_position", subjectId: "pos-1", payload: {} });
+  assert.doesNotMatch(reviewSummary.title, forbidden);
+  assert.doesNotMatch(reviewSummary.description, forbidden);
+  assert.doesNotMatch(closedSummary.title, forbidden);
+  assert.doesNotMatch(closedSummary.description, forbidden);
+});
+
 test("extractGovernanceFlags: reads camelCase payload keys too", () => {
   const flags = extractGovernanceFlags({ paperOnly: true, realExecutionLocked: true, noRealExecution: true, noBrokerOrder: true, noOrderPlaced: true });
   assert.deepEqual(flags, { paperOnly: true, realExecutionLocked: true, noRealExecution: true, noBrokerOrder: true, noOrderPlaced: true });
+});
+
+// ─── deriveCloseReviewEligibility (PR #17) ────────────────────────────────────
+
+const ELIGIBLE_OPEN_POSITION = {
+  status: "open",
+  currentPriceUsd: 65000,
+  currentNotionalUsd: 221,
+  entryNotionalUsd: 210.8,
+  quantity: 0.0034,
+};
+
+test("deriveCloseReviewEligibility: an open position with current price/notional, entry notional, and positive quantity is eligible", () => {
+  const result = deriveCloseReviewEligibility(ELIGIBLE_OPEN_POSITION);
+  assert.equal(result.eligible, true);
+  assert.equal(result.reason, null);
+});
+
+test("deriveCloseReviewEligibility: a closed position is not eligible (already_closed)", () => {
+  const result = deriveCloseReviewEligibility({ ...ELIGIBLE_OPEN_POSITION, status: "closed" });
+  assert.equal(result.eligible, false);
+  assert.equal(result.reason, "already_closed");
+});
+
+test("deriveCloseReviewEligibility: missing current_price_usd is not eligible (missing_valuation)", () => {
+  const result = deriveCloseReviewEligibility({ ...ELIGIBLE_OPEN_POSITION, currentPriceUsd: null });
+  assert.equal(result.eligible, false);
+  assert.equal(result.reason, "missing_valuation");
+});
+
+test("deriveCloseReviewEligibility: missing current_notional_usd is not eligible (missing_valuation)", () => {
+  const result = deriveCloseReviewEligibility({ ...ELIGIBLE_OPEN_POSITION, currentNotionalUsd: null });
+  assert.equal(result.eligible, false);
+  assert.equal(result.reason, "missing_valuation");
+});
+
+test("deriveCloseReviewEligibility: missing entry_notional_usd is not eligible (missing_valuation)", () => {
+  const result = deriveCloseReviewEligibility({ ...ELIGIBLE_OPEN_POSITION, entryNotionalUsd: null });
+  assert.equal(result.eligible, false);
+  assert.equal(result.reason, "missing_valuation");
+});
+
+test("deriveCloseReviewEligibility: quantity <= 0 is not eligible (missing_valuation)", () => {
+  assert.equal(deriveCloseReviewEligibility({ ...ELIGIBLE_OPEN_POSITION, quantity: 0 }).eligible, false);
+  assert.equal(deriveCloseReviewEligibility({ ...ELIGIBLE_OPEN_POSITION, quantity: 0 }).reason, "missing_valuation");
+  assert.equal(deriveCloseReviewEligibility({ ...ELIGIBLE_OPEN_POSITION, quantity: -1 }).eligible, false);
+});
+
+test("deriveCloseReviewEligibility: reports not_open (distinct from already_closed) for any status other than open/closed", () => {
+  // deriveCloseReviewEligibility only distinguishes "closed" as its own reason; any other
+  // non-"open" status value falls through to the generic not_open branch.
+  const result = deriveCloseReviewEligibility({ ...ELIGIBLE_OPEN_POSITION, status: "pending" });
+  assert.equal(result.eligible, false);
+  assert.equal(result.reason, "not_open");
+});
+
+test("deriveCloseReviewEligibility: the eligibility result never carries a message referencing execution/trading/broker", () => {
+  const result = deriveCloseReviewEligibility({ ...ELIGIBLE_OPEN_POSITION, status: "closed" });
+  const serialized = JSON.stringify(result);
+  assert.doesNotMatch(serialized, /\bexecute\b|trading|broker|sell now|trade now|place an? order/i);
 });

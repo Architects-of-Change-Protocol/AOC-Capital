@@ -109,12 +109,44 @@ export type PaperPositionRow = {
   unrealized_pnl_usd: number;
   unrealized_pnl_pct: number;
   realized_pnl_usd: number;
+  /** Set only when status = 'closed' — null for every position closed before PR #17. */
+  realized_pnl_pct: number | null;
   status: PaperPositionStatus;
   opened_at: string;
   closed_at: string | null;
+  /** Set only when status = 'closed' — the actor (email) who closed the position, via either close path. */
+  closed_by: string | null;
   close_price_usd: number | null;
+  /** Set only when status = 'closed' — null for every position closed before PR #17 (the older close_paper_position() path never set this). */
+  close_notional_usd: number | null;
   close_reason: CloseReason | null;
+  /** Set only when closed through the governed close review path (PR #17) — see paper_position_close_reviews. Null for positions closed through the older direct close_paper_position() path. */
+  close_review_id: string | null;
   last_marked_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** A single governed paper close review — see 20260913000000_aoc_capital_governed_close_position_review.sql. For v1 the review is deterministic and rule-based: it is only ever inserted with decision/status = 'approved' by close_paper_position_with_review_and_audit(); a review is never inserted for an ineligible request (those fail with a 409 and no row is written). */
+export type CloseReviewDecision = "approved" | "rejected";
+
+export type PaperPositionCloseReviewRow = {
+  id: string;
+  company_id: string;
+  portfolio_id: string;
+  paper_position_id: string;
+  trade_intent_id: string | null;
+  requested_by: string;
+  requested_at: string;
+  decision: CloseReviewDecision;
+  status: CloseReviewDecision;
+  close_price_usd: number | null;
+  close_notional_usd: number | null;
+  entry_notional_usd: number | null;
+  realized_pnl_usd: number | null;
+  realized_pnl_pct: number | null;
+  valuation_source: string;
+  review_payload: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
@@ -173,7 +205,9 @@ export type AuditLedgerEventType =
   | "signals_generated"
   | "signal_converted_to_draft_trade_intent"
   | "trade_intent_submitted_for_review"
-  | "draft_trade_intent_cancelled";
+  | "draft_trade_intent_cancelled"
+  | "paper_position_close_review_approved"
+  | "paper_position_closed";
 
 export type AuditLedgerRow = {
   id: string;
