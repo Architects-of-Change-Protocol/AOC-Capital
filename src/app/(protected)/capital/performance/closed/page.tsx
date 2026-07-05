@@ -431,6 +431,9 @@ export default async function ClosedPositionPerformancePage() {
           <Link href={NAV_LINKS.signalCohorts} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
             Signal Cohorts
           </Link>
+          <Link href={NAV_LINKS.governanceSnapshot} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
+            Governance Snapshot
+          </Link>
         </div>
       </SectionCard>
     </div>

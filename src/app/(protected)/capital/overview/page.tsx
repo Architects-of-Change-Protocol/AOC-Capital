@@ -139,6 +139,12 @@ export default async function PortfolioOverviewDashboardPage() {
           >
             View Signal Cohorts →
           </Link>
+          <Link
+            href={NAV_LINKS.governanceSnapshot}
+            className="inline-block rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-200 transition hover:border-cyan-200/30 hover:text-cyan-100"
+          >
+            View Governance Snapshot →
+          </Link>
         </div>
       </div>
 

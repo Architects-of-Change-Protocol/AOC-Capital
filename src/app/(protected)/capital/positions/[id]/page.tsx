@@ -401,6 +401,9 @@ export default async function PositionDetailPage({ params }: Props) {
               <Link href={relatedLinks.signalCohorts} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
                 Open Signal Cohorts
               </Link>
+              <Link href={relatedLinks.governanceSnapshot} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
+                Open Governance Snapshot
+              </Link>
             </div>
           </SectionCard>
         </div>

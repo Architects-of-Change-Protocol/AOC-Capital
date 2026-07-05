@@ -633,6 +633,9 @@ export default async function SignalCohortOutcomesPage() {
           <Link href={NAV_LINKS.strategies} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
             Strategy Library
           </Link>
+          <Link href={NAV_LINKS.governanceSnapshot} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
+            Governance Snapshot
+          </Link>
         </div>
       </SectionCard>
     </div>
