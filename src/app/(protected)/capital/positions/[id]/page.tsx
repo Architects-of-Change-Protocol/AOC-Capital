@@ -395,6 +395,9 @@ export default async function PositionDetailPage({ params }: Props) {
               <Link href={relatedLinks.closedPerformance} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
                 Open Closed Performance
               </Link>
+              <Link href={relatedLinks.strategyAttribution} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
+                Open Strategy Attribution
+              </Link>
             </div>
           </SectionCard>
         </div>

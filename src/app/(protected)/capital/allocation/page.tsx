@@ -140,6 +140,9 @@ export default async function AllocationExposurePage() {
           <Link href={NAV_LINKS.closedPerformance} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
             Closed Performance
           </Link>
+          <Link href={NAV_LINKS.strategyAttribution} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
+            Strategy Attribution
+          </Link>
         </div>
       </div>
 

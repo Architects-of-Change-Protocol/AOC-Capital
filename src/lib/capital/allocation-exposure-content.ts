@@ -38,4 +38,5 @@ export const NAV_LINKS = {
   positions: "/capital/positions",
   tradeIntents: "/capital/trade-intents",
   closedPerformance: "/capital/performance/closed",
+  strategyAttribution: "/capital/performance/strategies",
 } as const;
