@@ -12,6 +12,7 @@ const CAPITAL_NAV = [
   { href: "/capital/performance", label: "Strategy Performance" },
   { href: "/capital/performance/closed", label: "Closed Performance" },
   { href: "/capital/performance/strategies", label: "Strategy Attribution" },
+  { href: "/capital/performance/signals", label: "Signal Cohorts" },
   { href: "/capital/signals", label: "Signal Engine" },
   { href: "/capital/market-signals", label: "Market Signals" },
   { href: "/capital/market-data", label: "Market Data" },

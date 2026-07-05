@@ -678,6 +678,7 @@ export type PositionDetail = {
     performance: string;
     closedPerformance: string;
     strategyAttribution: string;
+    signalCohorts: string;
   };
 };
 
@@ -872,6 +873,7 @@ export async function getPositionDetail(companyId: string, positionId: string): 
       performance: "/capital/performance",
       closedPerformance: "/capital/performance/closed",
       strategyAttribution: "/capital/performance/strategies",
+      signalCohorts: "/capital/performance/signals",
     },
   };
 }
