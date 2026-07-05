@@ -78,6 +78,7 @@ export const NAV_LINKS = {
   closedPerformance: "/capital/performance/closed",
   strategyAttribution: "/capital/performance/strategies",
   signalCohorts: "/capital/performance/signals",
+  governanceSnapshot: "/capital/governance/snapshot",
 } as const;
 
 export const NAV_LABEL_CLOSED_PERFORMANCE = "Closed Performance";
