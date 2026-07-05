@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { InvestorConstitution } from "@/features/capital/domain/investor-constitution-schema";
 import { buildInvestorConstitutionFromIntake, type InvestorConstitutionIntakeAnswers } from "@/features/capital/domain/investor-constitution-intake";
+import { saveInvestorConstitutionForResult } from "@/lib/capital/investor-constitution-handoff";
 import {
   COMPLEXITY_ALLOWED_LABELS,
   CURRENCY_LABELS,
@@ -37,6 +38,12 @@ export function InvestorConstitutionIntakeForm() {
   const [answers, setAnswers] = useState<PartialAnswers>({});
   const [constitution, setConstitution] = useState<InvestorConstitution | null>(null);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (constitution) {
+      saveInvestorConstitutionForResult(constitution);
+    }
+  }, [constitution]);
 
   const totalSteps = INTAKE_QUESTIONS.length;
   const question = INTAKE_QUESTIONS[step];
@@ -88,6 +95,12 @@ export function InvestorConstitutionIntakeForm() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <a
+            href="/capital/constitution/result"
+            className="rounded-full border border-cyan-200/30 bg-cyan-300/[0.08] px-5 py-2.5 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/[0.16]"
+          >
+            View Strategy Eligibility
+          </a>
           <button
             type="button"
             disabled={saved}

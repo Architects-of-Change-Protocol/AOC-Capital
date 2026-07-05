@@ -11,6 +11,7 @@ import type {
   InvestorObjective,
   LiquidityRequirement,
   ProhibitedInstrument,
+  ReviewFrequency,
   RiskLevel,
   TimeHorizon,
 } from "@/features/capital/domain/investor-constitution-schema";
@@ -239,6 +240,13 @@ export const CURRENCY_LABELS: Record<Currency, string> = {
   USD: "US Dollars (USD)",
   mixed: "A mix of currencies",
   other: "Other",
+};
+
+export const REVIEW_FREQUENCY_LABELS: Record<ReviewFrequency, string> = {
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  semiannual: "Every 6 months",
+  annual: "Annual",
 };
 
 export const PROHIBITED_INSTRUMENT_LABELS: Record<ProhibitedInstrument, string> = {
