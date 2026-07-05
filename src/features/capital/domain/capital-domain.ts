@@ -5,6 +5,7 @@
 // here rather than reaching into individual domain files directly.
 
 export * from "./investor-constitution-schema";
+export * from "./investor-constitution-intake";
 export * from "./strategy-registry";
 export * from "./suitability-rules";
 export * from "./simulation-record-schema";

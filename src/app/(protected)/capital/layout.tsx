@@ -4,6 +4,7 @@ import { requireAuthUser } from "@/lib/auth";
 const CAPITAL_NAV = [
   { href: "/capital/demo", label: "Demo Sandbox" },
   { href: "/capital/advisor", label: "Advisor" },
+  { href: "/capital/constitution/new", label: "Investor Constitution" },
   { href: "/capital/strategies", label: "Strategy Library" },
   { href: "/capital", label: "Command Center" },
   { href: "/capital/overview", label: "Portfolio Overview" },
