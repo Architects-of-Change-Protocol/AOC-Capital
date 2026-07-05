@@ -27,7 +27,6 @@ const {
   EMPTY_STATE_NO_STRATEGIES,
   EMPTY_STATE_ONLY_CASH,
   CTA_CONTINUE_TO_SIMULATION,
-  CTA_CONTINUE_TO_SIMULATION_DISABLED_REASON,
 } = await import("../src/lib/capital/investor-constitution-result-content.ts");
 
 // ─── Route exists ────────────────────────────────────────────────────────────
@@ -94,14 +93,13 @@ test("the content component shows strategy version, suitability messages, prohib
 
 // ─── Next-step CTA ───────────────────────────────────────────────────────────
 
-test("CTA copy is 'Continue to Strategy Simulation' with a disabled reason of 'Simulation builder comes next'", () => {
+test("CTA copy is 'Continue to Strategy Simulation'", () => {
   assert.equal(CTA_CONTINUE_TO_SIMULATION, "Continue to Strategy Simulation");
-  assert.equal(CTA_CONTINUE_TO_SIMULATION_DISABLED_REASON, "Simulation builder comes next");
 });
 
-test("the CTA button is disabled in the content component and does not create a simulation", () => {
+test("the CTA links to the simulation builder and does not create a simulation itself", () => {
   assert.match(contentComponentTsx, /CTA_CONTINUE_TO_SIMULATION/);
-  assert.match(contentComponentTsx, /disabled/);
+  assert.match(contentComponentTsx, /href="\/capital\/simulations\/new"/);
   assert.doesNotMatch(contentComponentTsx, /createSimulation|createDraftSimulationRecord/);
 });
 
