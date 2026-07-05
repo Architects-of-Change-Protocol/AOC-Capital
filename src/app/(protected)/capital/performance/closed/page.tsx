@@ -425,6 +425,9 @@ export default async function ClosedPositionPerformancePage() {
           <Link href={NAV_LINKS.performance} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
             Strategy Performance Review
           </Link>
+          <Link href={NAV_LINKS.strategyAttribution} className="text-cyan-200 underline underline-offset-2 hover:text-cyan-100">
+            Strategy Attribution
+          </Link>
         </div>
       </SectionCard>
     </div>
