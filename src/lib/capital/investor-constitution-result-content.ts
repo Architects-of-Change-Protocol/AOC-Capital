@@ -37,7 +37,6 @@ export const NO_CONSTITUTION_FOUND_MESSAGE =
   "We couldn't find a generated Investor Constitution for this browser session. Build one first to see your strategy eligibility.";
 
 export const CTA_CONTINUE_TO_SIMULATION = "Continue to Strategy Simulation";
-export const CTA_CONTINUE_TO_SIMULATION_DISABLED_REASON = "Simulation builder comes next";
 
 export const ACTION_EDIT_ANSWERS = "Edit answers";
 export const ACTION_START_OVER = "Start over";

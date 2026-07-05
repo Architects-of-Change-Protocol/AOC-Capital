@@ -31,7 +31,6 @@ import {
   ACTION_EDIT_ANSWERS,
   ACTION_START_OVER,
   CTA_CONTINUE_TO_SIMULATION,
-  CTA_CONTINUE_TO_SIMULATION_DISABLED_REASON,
   ELIGIBILITY_SECTION_TITLES,
   EMPTY_STATE_NO_STRATEGIES,
   EMPTY_STATE_ONLY_CASH,
@@ -266,15 +265,12 @@ export function ConstitutionResultContent() {
         >
           {ACTION_START_OVER}
         </button>
-        <button
-          type="button"
-          disabled
-          title={CTA_CONTINUE_TO_SIMULATION_DISABLED_REASON}
-          className="cursor-not-allowed rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-500 opacity-60"
+        <a
+          href="/capital/simulations/new"
+          className="rounded-full border border-cyan-200/30 bg-cyan-300/[0.08] px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/[0.16]"
         >
           {CTA_CONTINUE_TO_SIMULATION}
-        </button>
-        <span className="text-xs text-slate-500">{CTA_CONTINUE_TO_SIMULATION_DISABLED_REASON}</span>
+        </a>
       </div>
     </div>
   );
