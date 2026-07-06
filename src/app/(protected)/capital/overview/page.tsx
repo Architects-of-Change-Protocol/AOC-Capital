@@ -42,7 +42,7 @@ const INTENT_STATUS_STYLE: Record<string, string> = {
 };
 
 function fmtUsd(value: number | null): string {
-  if (value === null) return "Not available yet";
+  if (value === null) return "Not available";
   return `$${value.toFixed(2)}`;
 }
 
@@ -350,9 +350,9 @@ export default async function PortfolioOverviewDashboardPage() {
               <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400 sm:grid-cols-4">
                 <span>Quantity: {position.quantity}</span>
                 <span>Entry price: ${position.entryPriceUsd.toFixed(2)}</span>
-                <span>Current price: {position.currentPriceUsd !== null ? `$${position.currentPriceUsd.toFixed(2)}` : "Not available yet"}</span>
+                <span>Current price: {position.currentPriceUsd !== null ? `$${position.currentPriceUsd.toFixed(2)}` : "Not available"}</span>
                 <span>Entry notional: ${position.entryNotionalUsd.toFixed(2)}</span>
-                <span>Current notional: {position.currentNotionalUsd !== null ? `$${position.currentNotionalUsd.toFixed(2)}` : "Not available yet"}</span>
+                <span>Current notional: {position.currentNotionalUsd !== null ? `$${position.currentNotionalUsd.toFixed(2)}` : "Not available"}</span>
                 <span className={pnlClassName(position.unrealizedPnlUsd)}>Unrealized P&L: {fmtUsd(position.unrealizedPnlUsd)}</span>
                 <span>Opened: {fmtDate(position.openedAt)}</span>
               </div>

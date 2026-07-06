@@ -38,6 +38,13 @@ export default async function PaperPositionsPage() {
               Marked to a live public market price when available, or a deterministic simulated price otherwise — see Market Data
               for the current source.
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {["Paper-only", "Governed paper action", "Real execution locked", "No broker connected"].map((badge) => (
+                <span key={badge} className="rounded-full border border-cyan-200/30 bg-cyan-300/[0.08] px-3 py-1 text-xs font-medium text-cyan-100">
+                  {badge}
+                </span>
+              ))}
+            </div>
           </div>
           <MarkAllButton />
         </div>

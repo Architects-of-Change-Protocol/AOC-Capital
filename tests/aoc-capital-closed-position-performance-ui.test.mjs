@@ -15,6 +15,7 @@ import fs from "node:fs";
 const contentTs = fs.readFileSync("src/lib/capital/closed-position-performance-content.ts", "utf8");
 const pageTsx = fs.readFileSync("src/app/(protected)/capital/performance/closed/page.tsx", "utf8");
 const layoutTsx = fs.readFileSync("src/app/(protected)/capital/layout.tsx", "utf8");
+const capitalNavigationTs = fs.readFileSync("src/lib/capital/capital-navigation.ts", "utf8");
 const overviewPageTsx = fs.readFileSync("src/app/(protected)/capital/overview/page.tsx", "utf8");
 const overviewContentTs = fs.readFileSync("src/lib/capital/portfolio-overview-content.ts", "utf8");
 const allocationPageTsx = fs.readFileSync("src/app/(protected)/capital/allocation/page.tsx", "utf8");
@@ -164,7 +165,8 @@ test("this section is never called strategy alpha or investment performance", ()
 // ─── Nav wiring ──────────────────────────────────────────────────────────────
 
 test("the capital layout nav links to /capital/performance/closed", () => {
-  assert.match(layoutTsx, /href:\s*"\/capital\/performance\/closed"/);
+  assert.match(capitalNavigationTs, /href:\s*"\/capital\/performance\/closed"/);
+  assert.match(layoutTsx, /getCapitalNavGroups/);
 });
 
 test("Portfolio Overview links out to Closed Performance", () => {
