@@ -15,6 +15,7 @@ const pageTsx = fs.readFileSync(`${ROUTE_DIR}/page.tsx`, "utf8");
 const formTsx = fs.readFileSync(`${ROUTE_DIR}/investor-constitution-intake-form.tsx`, "utf8");
 const contentTs = fs.readFileSync("src/lib/capital/investor-constitution-intake-content.ts", "utf8");
 const layoutTsx = fs.readFileSync("src/app/(protected)/capital/layout.tsx", "utf8");
+const capitalNavigationTs = fs.readFileSync("src/lib/capital/capital-navigation.ts", "utf8");
 
 const { INTRO_PARAGRAPHS, INTAKE_QUESTIONS, RESULT_TITLE } = await import(
   "../src/lib/capital/investor-constitution-intake-content.ts"
@@ -27,7 +28,8 @@ test("the /capital/constitution/new route exists", () => {
 });
 
 test("the capital layout nav links to /capital/constitution/new", () => {
-  assert.match(layoutTsx, /href:\s*"\/capital\/constitution\/new"/);
+  assert.match(capitalNavigationTs, /href:\s*"\/capital\/constitution\/new"/);
+  assert.match(layoutTsx, /getCapitalNavGroups/);
 });
 
 // ─── Intro copy ──────────────────────────────────────────────────────────────

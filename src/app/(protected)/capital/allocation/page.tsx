@@ -40,7 +40,7 @@ const NOTE_SEVERITY_STYLE: Record<string, string> = {
 };
 
 function fmtUsd(value: number | null): string {
-  if (value === null) return "Not available yet";
+  if (value === null) return "Not available";
   return `$${value.toFixed(2)}`;
 }
 
@@ -213,7 +213,7 @@ export default async function AllocationExposurePage() {
                   <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400 sm:grid-cols-4">
                     <span>Quantity: {p.quantity}</span>
                     <span>Entry: ${p.entryPriceUsd.toFixed(2)}</span>
-                    <span>Current: {p.currentPriceUsd !== null ? `$${p.currentPriceUsd.toFixed(2)}` : "Not available yet"}</span>
+                    <span>Current: {p.currentPriceUsd !== null ? `$${p.currentPriceUsd.toFixed(2)}` : "Not available"}</span>
                     <span>Weight: {fmtPct(p.exposureWeight)}</span>
                     <span>Opened: {fmtDate(p.openedAt)}</span>
                   </div>

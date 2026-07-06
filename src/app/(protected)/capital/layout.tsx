@@ -1,31 +1,11 @@
 import Link from "next/link";
 import { requireAuthUser } from "@/lib/auth";
-
-const CAPITAL_NAV = [
-  { href: "/capital/demo", label: "Demo Sandbox" },
-  { href: "/capital/advisor", label: "Advisor" },
-  { href: "/capital/constitution/new", label: "Investor Constitution" },
-  { href: "/capital/strategies", label: "Strategy Library" },
-  { href: "/capital", label: "Command Center" },
-  { href: "/capital/overview", label: "Portfolio Overview" },
-  { href: "/capital/allocation", label: "Allocation & Exposure" },
-  { href: "/capital/performance", label: "Strategy Performance" },
-  { href: "/capital/performance/closed", label: "Closed Performance" },
-  { href: "/capital/performance/strategies", label: "Strategy Attribution" },
-  { href: "/capital/performance/signals", label: "Signal Cohorts" },
-  { href: "/capital/governance/snapshot", label: "Governance Snapshot" },
-  { href: "/capital/signals", label: "Signal Engine" },
-  { href: "/capital/market-signals", label: "Market Signals" },
-  { href: "/capital/market-data", label: "Market Data" },
-  { href: "/capital/trade-intents", label: "Trade Intents" },
-  { href: "/capital/positions", label: "Paper Positions" },
-  { href: "/capital/risk-constitution", label: "Risk Constitution" },
-  { href: "/capital/capital-levels", label: "Capital Levels" },
-  { href: "/capital/audit-ledger", label: "Audit Ledger" },
-];
+import { getCapitalNavGroups } from "@/lib/capital/capital-navigation";
 
 export default async function CapitalLayout({ children }: { children: React.ReactNode }) {
   await requireAuthUser();
+
+  const navGroups = getCapitalNavGroups();
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -38,15 +18,23 @@ export default async function CapitalLayout({ children }: { children: React.Reac
         </p>
       </div>
 
-      <nav className="mb-6 flex flex-wrap gap-2 border-b border-white/10 pb-4">
-        {CAPITAL_NAV.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-slate-200 transition hover:border-cyan-200/30 hover:bg-cyan-300/[0.07] hover:text-cyan-100"
-          >
-            {item.label}
-          </Link>
+      <nav className="mb-6 flex flex-wrap gap-x-6 gap-y-3 border-b border-white/10 pb-4">
+        {navGroups.map((group) => (
+          <div key={group.key} className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">{group.label}</span>
+            <div className="flex flex-wrap gap-2">
+              {group.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={item.description}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-slate-200 transition hover:border-cyan-200/30 hover:bg-cyan-300/[0.07] hover:text-cyan-100"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 

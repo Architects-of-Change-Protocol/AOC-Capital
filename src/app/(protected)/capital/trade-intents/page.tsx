@@ -20,10 +20,23 @@ export default async function TradeIntentsPage() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs uppercase tracking-[0.2em] text-slate-400">
+        Paper only · Simulation mode · No real money is being traded
+      </div>
+
       <CreateTradeIntentForm />
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-        <h2 className="mb-4 text-lg font-semibold text-white">Trade Intents</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-white">Trade Intents</h2>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {["Paper-only", "Governed paper action", "Real execution locked", "No broker connected"].map((badge) => (
+              <span key={badge} className="rounded-full border border-cyan-200/30 bg-cyan-300/[0.08] px-3 py-1 text-xs font-medium text-cyan-100">
+                {badge}
+              </span>
+            ))}
+          </div>
+        </div>
         <div className="space-y-2">
           {intents.length === 0 && <p className="text-sm text-slate-500">No trade intents yet.</p>}
           {intents.map((intent) => {
