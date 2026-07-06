@@ -1,5 +1,5 @@
 import { requireAuthUser } from "@/lib/auth";
-import { getOrCreateDefaultPortfolio, markAllOpenPositions, getStrategyPerformance } from "@/lib/trading/trade-service";
+import { getOrCreateDefaultPortfolio, getStrategyPerformance } from "@/lib/trading/trade-service";
 import type { StrategyHealth } from "@/lib/trading/portfolio-summary";
 import type { AdvisorRecommendationAction } from "@/lib/trading/strategy-performance";
 
@@ -37,7 +37,6 @@ function pnlTone(value: number): "positive" | "negative" | undefined {
 export default async function StrategyPerformancePage() {
   const user = await requireAuthUser();
   const portfolio = await getOrCreateDefaultPortfolio(user.companyId);
-  await markAllOpenPositions(user.companyId, portfolio.id);
   const perf = await getStrategyPerformance(user.companyId, portfolio);
 
   const healthCopy = HEALTH_COPY[perf.strategyHealth];
